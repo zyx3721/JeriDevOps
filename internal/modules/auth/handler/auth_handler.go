@@ -33,7 +33,7 @@ func (h *AuthApiHandler) Init() error {
 		return fmt.Errorf("failed to init auth middleware: %w", err)
 	}
 
-	h.handler = NewAuthHandler(db, cfg.JWTSecret)
+	h.handler = NewAuthHandler(db, cfg.JWTSecret, cfg.JWTExpiration)
 
 	root := cfg.Application.GinRootRouter().Group("auth")
 	h.Register(root)
@@ -47,12 +47,13 @@ func (h *AuthApiHandler) Register(r gin.IRouter) {
 }
 
 type AuthHandler struct {
-	db        *gorm.DB
-	jwtSecret string
+	db            *gorm.DB
+	jwtSecret     string
+	jwtExpiration int
 }
 
-func NewAuthHandler(db *gorm.DB, jwtSecret string) *AuthHandler {
-	return &AuthHandler{db: db, jwtSecret: jwtSecret}
+func NewAuthHandler(db *gorm.DB, jwtSecret string, jwtExpiration int) *AuthHandler {
+	return &AuthHandler{db: db, jwtSecret: jwtSecret, jwtExpiration: jwtExpiration}
 }
 
 // Login godoc
@@ -100,7 +101,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := middleware.GenerateToken(user.ID, user.Username, user.Role, h.jwtSecret)
+	token, err := middleware.GenerateToken(user.ID, user.Username, user.Role, h.jwtSecret, h.jwtExpiration)
 	if err != nil {
 		response.InternalError(c, "生成Token失败")
 		return
