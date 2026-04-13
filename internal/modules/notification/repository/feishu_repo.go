@@ -243,12 +243,25 @@ func (r *FeishuUserTokenRepository) Save(ctx context.Context, token *models.Feis
 	var existing models.FeishuUserToken
 	err := r.db.WithContext(ctx).Where("app_id = ?", token.AppID).First(&existing).Error
 	if err == nil {
-		token.ID = existing.ID
-		return r.db.WithContext(ctx).Save(token).Error
+		return r.db.WithContext(ctx).Model(&existing).Updates(map[string]any{
+			"access_token":  token.AccessToken,
+			"refresh_token": token.RefreshToken,
+			"expires_at":    token.ExpiresAt,
+		}).Error
 	}
 	return r.db.WithContext(ctx).Create(token).Error
 }
 
 func (r *FeishuUserTokenRepository) Delete(ctx context.Context, appID string) error {
 	return r.db.WithContext(ctx).Where("app_id = ?", appID).Delete(&models.FeishuUserToken{}).Error
+}
+
+// GetLatest 获取最新的一条用户令牌（用于 app_id 不匹配时的 fallback）
+func (r *FeishuUserTokenRepository) GetLatest(ctx context.Context) (*models.FeishuUserToken, error) {
+	var token models.FeishuUserToken
+	err := r.db.WithContext(ctx).Order("updated_at DESC").First(&token).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
 }
