@@ -151,6 +151,7 @@ cp .env.example .env
 | `PORT` | `8080` | HTTP 监听端口 |
 | `LOG_LEVEL` | `info` | 日志级别：`debug` / `info` / `warn` / `error` |
 | `DEBUG` | `false` | 调试模式，`true` 时输出 Gin 路由信息和 SQL 日志 |
+| `VERSION` | `1.0.0` | 服务版本号，显示在飞书管理页面右上角，便于区分部署版本 |
 | `READ_TIMEOUT` | `10` | HTTP 读取超时（秒） |
 | `WRITE_TIMEOUT` | `10` | HTTP 写入超时（秒） |
 | `SHUTDOWN_TIMEOUT` | `5` | 优雅关闭等待时间（秒） |
@@ -219,12 +220,144 @@ cp .env.example .env
 > - 如果只有一个飞书应用，在 `.env` 填写即可，同时也在页面上录入一份，供 Jenkins/K8s 绑定使用。
 > - 如果有多个飞书应用（多团队），通过页面统一管理，`.env` 填写一个兜底的默认应用。
 
+### 飞书应用权限配置
+
+在[飞书开发者后台](https://open.feishu.cn/app)创建应用后，需开通以下权限，否则相关功能将报错：
+
+**应用身份权限（tenant_access_token，必须开通）：**
+
+| 权限标识 | 说明 | 用途 |
+|---------|------|------|
+| `contact:user.id:readonly` | 通过手机号/邮箱获取用户 ID | 用户搜索（手机号/邮箱精确匹配） |
+| `contact:user.base:readonly` | 获取用户基本信息 | 获取用户姓名、头像等详情 |
+| `im:message:send_as_bot` | 以应用身份发送消息 | 发送飞书消息 |
+| `im:chat` | 获取与更新群组信息 | 群聊管理（查询/创建/添加成员） |
+| `im:chat:create` | 创建群组 | 创建群聊 |
+
+**用户身份权限（user_access_token，按需开通）：**
+
+| 权限标识 | 说明 | 用途 |
+|---------|------|------|
+| `search:user` | 搜索用户 | 按姓名/拼音模糊搜索用户（需 OAuth 授权） |
+
+> **注意**：修改权限后必须**重新发布应用版本**才能生效。
+
+### 飞书 OAuth 授权（按姓名搜索用户）
+
+按姓名/拼音搜索用户需要 `user_access_token`，必须完成 OAuth 授权流程：
+
+**第一步：配置回调地址**
+
+在飞书开发者后台 → 应用详情 → **安全设置** → **重定向 URL** 中添加：
+
+```
+# 本地开发
+http://localhost:8090/app/api/v1/feishu/oauth/callback
+
+# 生产环境（替换为实际域名）
+https://your-domain.com/app/api/v1/feishu/oauth/callback
+```
+
+> 回调地址必须与实际访问地址完全一致（含端口），否则授权时报错 20029。
+
+**第二步：发布应用版本**
+
+每次修改权限或安全配置后，必须在飞书开发者后台发布新版本才能生效。
+
+**第三步：执行授权**
+
+在前端 **飞书管理 → 用户搜索** 页面，点击 **飞书授权** 按钮，使用飞书账号完成 OAuth 登录。授权成功后系统会自动保存 `user_access_token` 和 `refresh_token`，并每小时自动刷新，无需重复授权。
+
+> **说明**：未完成 OAuth 授权时，用户搜索仍可通过手机号/邮箱精确匹配，但无法按姓名模糊搜索。
+
 ### JWT 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `JWT_SECRET` | `your-secret-key` | JWT 签名密钥，**生产环境必须修改为强随机字符串** |
 | `JWT_EXPIRATION` | `24` | Token 有效期（小时） |
+
+## 📨 飞书消息发送格式说明
+
+前端页面 **飞书管理 → 发送消息** 中，不同消息类型对应不同的 `content` 格式，填写错误会导致飞书 API 报错。
+
+### text（文本消息）
+
+直接填写纯文本内容即可，后端会自动包装成飞书要求的格式：
+
+```
+你好，这是一条测试消息
+```
+
+---
+
+### post（富文本消息）
+
+必须填写符合飞书富文本规范的 JSON，结构为 `{"zh_cn": {...}}`：
+
+```json
+{
+  "zh_cn": {
+    "title": "消息标题",
+    "content": [
+      [
+        {"tag": "text", "text": "这是一段普通文字，"},
+        {"tag": "a", "text": "点击跳转", "href": "https://example.com"}
+      ],
+      [
+        {"tag": "text", "text": "第二行内容"}
+      ]
+    ]
+  }
+}
+```
+
+常用 tag 类型：
+
+| tag | 说明 | 必填字段 |
+|-----|------|---------|
+| `text` | 普通文本 | `text` |
+| `a` | 超链接 | `text`, `href` |
+| `at` | @用户 | `user_id`（填 `all` 表示 @所有人） |
+| `img` | 图片 | `image_key`（需先上传图片获取 key） |
+
+---
+
+### interactive（卡片消息）
+
+必须填写符合飞书卡片 2.0 规范的 JSON：
+
+```json
+{
+  "schema": "2.0",
+  "header": {
+    "title": {
+      "content": "卡片标题",
+      "tag": "plain_text"
+    },
+    "template": "blue"
+  },
+  "body": {
+    "elements": [
+      {
+        "tag": "markdown",
+        "content": "**加粗文字**\n普通文字\n[链接](https://example.com)"
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "markdown",
+        "content": "底部说明文字"
+      }
+    ]
+  }
+}
+```
+
+`header.template` 可选颜色：`blue`、`green`、`red`、`yellow`、`grey`、`purple`
+
+> **注意**：`interactive` 类型的 content 必须是完整的卡片 JSON 对象，不能填写普通字符串。
 
 > **安全提示**：`.env` 文件已加入 `.gitignore`，请勿将真实密钥提交到版本控制系统。
 
