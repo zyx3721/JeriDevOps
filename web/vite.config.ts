@@ -8,7 +8,7 @@ function normalizeBaseURL(raw: string): string {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const devApiTarget = normalizeBaseURL(env.VITE_API_BASE || 'http://localhost:8080')
+  const devApiTarget = normalizeBaseURL(env.VITE_DEV_PROXY_TARGET || 'http://localhost:8080')
 
   return {
     plugins: [vue() as any],
