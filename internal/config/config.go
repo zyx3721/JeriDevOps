@@ -110,10 +110,10 @@ func LoadConfig() (*Config, error) {
 
 			// MySQL 配置
 			MySQLHost:            getEnv("MYSQL_HOST", "localhost"),
-			MySQLPort:            getIntEnv("MYSQL_PORT", 33066),
+			MySQLPort:            getIntEnv("MYSQL_PORT", 3306),
 			MySQLUser:            getEnv("MYSQL_USER", "root"),
 			MySQLPassword:        getEnv("MYSQL_PASSWORD", "123456"),
-			MySQLDatabase:        getEnv("MYSQL_DATABASE", "jenkins_feishu"),
+			MySQLDatabase:        getEnv("MYSQL_DATABASE", "devops"),
 			MySQLMaxIdleConns:    getIntEnv("MYSQL_MAX_IDLE_CONNS", 10),
 			MySQLMaxOpenConns:    getIntEnv("MYSQL_MAX_OPEN_CONNS", 100),
 			MySQLConnMaxLifetime: getDurationEnv("MYSQL_CONN_MAX_LIFETIME", 3600*time.Second),
