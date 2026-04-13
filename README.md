@@ -61,14 +61,40 @@ devops/
 - **Kubernetes**: 运行中的集群（本地开发可选，完整功能需要）
 
 ### 1. 数据库设置
-使用 `migrations` 目录下的脚本初始化数据库。详细说明请参考 [迁移指南](migrations/README.md)。
+
+**全新部署**：按顺序执行以下所有脚本（共 7 个）。
 
 ```bash
-# 基础设置
+# 1. 核心基础表（用户、RBAC、审计日志、K8s、Jenkins、告警、健康检查、定时 HPA 等）
 mysql -u root -p devops < migrations/init_tables.sql
-mysql -u root -p devops < migrations/create_rbac_tables.sql
-mysql -u root -p devops < migrations/init_rbac.sql
+
+# 2. 流水线模板表
+mysql -u root -p devops < migrations/pipeline_templates.sql
+
+# 3. 制品管理表
+mysql -u root -p devops < migrations/build_artifact.sql
+
+# 4. 流量治理表
+mysql -u root -p devops < migrations/traffic_management_v2.sql
+
+# 5. 流量监控与金丝雀发布表
+mysql -u root -p devops < migrations/traffic_monitoring_canary.sql
+
+# 6. AI Copilot 表
+mysql -u root -p devops < migrations/ai_copilot.sql
+
+# 7. 制品仓库与监控历史表（含触发器/定时事件）
+mysql -u root -p devops < migrations/artifact_registry_monitoring.sql
 ```
+
+> **升级已有安装**（仅在原有数据库上执行，全新部署无需运行）：
+>
+> ```bash
+> mysql -u root -p devops < migrations/add_log_alert_silence_fields.sql
+> mysql -u root -p devops < migrations/fix_pipeline_templates_columns.sql
+> mysql -u root -p devops < migrations/fix_loadbalance_hash_key.sql
+> mysql -u root -p devops < migrations/update_alert_channels.sql
+> ```
 
 ### 2. 后端设置
 
