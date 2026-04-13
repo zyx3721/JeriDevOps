@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // ========== 消息发送 ==========
@@ -56,6 +57,9 @@ func (c *Client) SendMessage(ctx context.Context, receiveID, receiveIdType, msgT
 
 	sendURL := fmt.Sprintf("https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=%s", receiveIdType)
 
+	// 飞书 API content 字段规则：
+	// - text 类型：content 是字符串，值为 {"text":"..."} 序列化后的字符串
+	// - post/interactive 类型：content 是 JSON 对象，直接嵌入
 	messagePayload := map[string]any{
 		"receive_id": receiveID,
 		"msg_type":   msgType,
@@ -63,9 +67,30 @@ func (c *Client) SendMessage(ctx context.Context, receiveID, receiveIdType, msgT
 
 	switch msgType {
 	case "text":
-		messagePayload["content"] = content
-	case "interactive":
-		messagePayload["content"] = content
+		// 提取纯文本，统一包装成 {"text":"..."} 字符串
+		trimmed := strings.TrimSpace(content)
+		var plain string
+		if len(trimmed) > 0 && trimmed[0] == '{' {
+			// 前端传入 {"text":"..."} 格式，提取 text 字段值
+			var obj map[string]string
+			if err := json.Unmarshal([]byte(trimmed), &obj); err == nil {
+				plain = obj["text"]
+			} else {
+				plain = content
+			}
+		} else if len(trimmed) > 0 && trimmed[0] == '"' {
+			// 带引号的 JSON 字符串，unescape
+			if err := json.Unmarshal([]byte(trimmed), &plain); err != nil {
+				plain = content
+			}
+		} else {
+			plain = content
+		}
+		wrapped, _ := json.Marshal(map[string]string{"text": plain})
+		messagePayload["content"] = string(wrapped)
+	case "post", "interactive":
+		// post/interactive：content 是 JSON 对象，用 RawMessage 直接嵌入避免二次序列化
+		messagePayload["content"] = json.RawMessage(strings.TrimSpace(content))
 	default:
 		c.logger.Error("Unsupported message type: %s", msgType)
 		return fmt.Errorf("unsupported message type: %s", msgType)
