@@ -3,9 +3,11 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	mysqlDriver "github.com/go-sql-driver/mysql"
 	"github.com/robfig/cron/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -338,6 +340,10 @@ func (s *CronHPAService) loadAndScheduleAll() {
 
 	var cronHPAs []models.CronHPA
 	if err := s.db.Where("enabled = ?", true).Find(&cronHPAs).Error; err != nil {
+		if isMySQLTableNotFound(err) {
+			log.Warn("cron_hpa table is missing, skipping CronHPA bootstrap load until migrations are applied")
+			return
+		}
 		log.WithError(err).Error("加载CronHPA失败")
 		return
 	}
@@ -353,4 +359,9 @@ func (s *CronHPAService) loadAndScheduleAll() {
 // Stop 停止调度器
 func (s *CronHPAService) Stop() {
 	s.scheduler.Stop()
+}
+
+func isMySQLTableNotFound(err error) bool {
+	var mysqlErr *mysqlDriver.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1146
 }
