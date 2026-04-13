@@ -66,9 +66,7 @@ devops/
 ```bash
 # 基础设置
 mysql -u root -p devops < migrations/init_tables.sql
-
-# 如需修复旧版 RBAC 字段缺失或重放 RBAC 初始数据，再执行
-mysql -u root -p devops < migrations/fix_permissions_description.sql
+mysql -u root -p devops < migrations/create_rbac_tables.sql
 mysql -u root -p devops < migrations/init_rbac.sql
 ```
 
@@ -117,7 +115,7 @@ docker-compose up --build -d
 
 ## ⚙️ 配置
 
-应用通过 `.env` 文件或环境变量进行配置。主要配置项包括：
+应用启动时会从当前目录向上查找并自动加载 `.env`，也支持直接使用环境变量。主要配置项包括：
 
 - `DB_DSN`: MySQL 连接字符串。
 - `REDIS_ADDR`: Redis 地址。
