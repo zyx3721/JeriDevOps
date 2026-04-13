@@ -101,7 +101,7 @@
                   <a-input v-model:value="messageForm.title" placeholder="消息标题" />
                 </a-form-item>
                 <a-form-item label="消息内容" required>
-                  <a-textarea v-model:value="messageForm.content" placeholder="请输入消息内容" :rows="6" />
+                  <a-textarea v-model:value="messageForm.content" :placeholder="messageContentPlaceholder" :rows="6" />
                 </a-form-item>
                 <a-form-item>
                   <a-button type="primary" @click="sendMessage" :loading="sendingMessage" block>
@@ -129,7 +129,7 @@
                   <a-input v-model:value="webhookForm.title" placeholder="消息标题" />
                 </a-form-item>
                 <a-form-item label="消息内容" required>
-                  <a-textarea v-model:value="webhookForm.content" placeholder="请输入消息内容" :rows="4" />
+                  <a-textarea v-model:value="webhookForm.content" :placeholder="webhookContentPlaceholder" :rows="4" />
                 </a-form-item>
                 <a-form-item label="@用户">
                   <a-select v-model:value="webhookForm.at_users" mode="tags" placeholder="输入用户ID后回车" style="width: 100%" />
@@ -260,7 +260,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { SendOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { dingtalkAppApi, dingtalkBotApi, dingtalkApi, dingtalkLogApi, type DingtalkApp, type DingtalkBot, type DingtalkMessageLog, type DingtalkUser } from '@/services/dingtalk'
@@ -476,6 +476,20 @@ const selectUser = (user: DingtalkUser) => {
 }
 
 const viewLogDetail = (log: DingtalkMessageLog) => { currentLog.value = log; logDetailVisible.value = true }
+
+const messageContentPlaceholder = computed(() => {
+  if (messageForm.msg_type === 'markdown') {
+    return '示例：\n## 标题\n**加粗文字**\n普通文字\n[链接](https://example.com)'
+  }
+  return '示例：\n你好，这是一条测试消息'
+})
+
+const webhookContentPlaceholder = computed(() => {
+  if (webhookForm.msg_type === 'markdown') {
+    return '示例：\n## 标题\n**加粗文字**\n普通文字\n[链接](https://example.com)'
+  }
+  return '示例：\n你好，这是一条测试消息'
+})
 
 onMounted(() => { fetchApps(); fetchBots(); fetchLogs() })
 </script>

@@ -116,7 +116,7 @@
                   <a-input v-model:value="messageForm.title" placeholder="卡片标题" />
                 </a-form-item>
                 <a-form-item label="消息内容" required>
-                  <a-textarea v-model:value="messageForm.content" placeholder="请输入消息内容" :rows="6" />
+                  <a-textarea v-model:value="messageForm.content" :placeholder="messageContentPlaceholder" :rows="6" />
                 </a-form-item>
                 <a-form-item v-if="messageForm.msg_type === 'textcard'" label="跳转链接">
                   <a-input v-model:value="messageForm.url" placeholder="https://example.com" />
@@ -144,7 +144,7 @@
                   </a-radio-group>
                 </a-form-item>
                 <a-form-item label="消息内容" required>
-                  <a-textarea v-model:value="webhookForm.content" placeholder="请输入消息内容" :rows="4" />
+                  <a-textarea v-model:value="webhookForm.content" :placeholder="webhookContentPlaceholder" :rows="4" />
                 </a-form-item>
                 <a-form-item label="@用户">
                   <a-select v-model:value="webhookForm.mentioned_list" mode="tags" placeholder="输入用户ID后回车，@all表示所有人" style="width: 100%" />
@@ -273,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { SendOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { wechatworkAppApi, wechatworkBotApi, wechatworkApi, wechatworkLogApi, type WechatWorkApp, type WechatWorkBot, type WechatWorkMessageLog, type WechatWorkUser } from '@/services/wechatwork'
@@ -488,6 +488,24 @@ const selectUser = (user: WechatWorkUser) => {
 }
 
 const viewLogDetail = (log: WechatWorkMessageLog) => { currentLog.value = log; logDetailVisible.value = true }
+
+const messageContentPlaceholder = computed(() => {
+  switch (messageForm.msg_type) {
+    case 'markdown':
+      return '示例：\n## 标题\n**加粗文字**\n普通文字\n[链接](https://example.com)'
+    case 'textcard':
+      return '示例：\n卡片正文内容，支持 <a href="https://example.com">链接</a>'
+    default:
+      return '示例：\n你好，这是一条测试消息'
+  }
+})
+
+const webhookContentPlaceholder = computed(() => {
+  if (webhookForm.msg_type === 'markdown') {
+    return '示例：\n## 标题\n**加粗文字**\n普通文字\n[链接](https://example.com)'
+  }
+  return '示例：\n你好，这是一条测试消息'
+})
 
 onMounted(() => { fetchApps(); fetchBots(); fetchLogs() })
 </script>
