@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	_ "devops/pkg/dto" // swagger 文档需要
+
 	"github.com/gin-gonic/gin"
 )
 

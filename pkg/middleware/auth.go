@@ -111,7 +111,6 @@ func parseToken(tokenString string) (*Claims, error) {
 }
 
 // GenerateToken 生成JWT token
-// @param expirationHours int token 有效期（小时）
 func GenerateToken(userID uint, username, role string, secret string, expirationHours int) (string, error) {
 	secretBytes := []byte(secret)
 	if len(secretBytes) == 0 {

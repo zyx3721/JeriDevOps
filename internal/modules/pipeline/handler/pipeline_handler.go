@@ -146,7 +146,7 @@ func (h *PipelineHandler) ListPipelines(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "流水线ID"
-// @Success 200 {object} response.Response{data=dto.PipelineResponse}
+// @Success 200 {object} response.Response{data=dto.PipelineDetailResponse}
 // @Failure 400 {object} response.Response
 // @Failure 404 {object} response.Response
 // @Router /pipelines/{id} [get]
@@ -297,7 +297,7 @@ func (h *PipelineHandler) TogglePipeline(c *gin.Context) {
 // @Produce json
 // @Param id path int true "流水线ID"
 // @Param body body dto.RunPipelineRequest false "运行参数"
-// @Success 200 {object} response.Response{data=dto.PipelineRunResponse}
+// @Success 200 {object} response.Response{data=dto.PipelineRunDetailResponse}
 // @Failure 400 {object} response.Response
 // @Router /pipelines/{id}/run [post]
 func (h *PipelineHandler) RunPipeline(c *gin.Context) {
