@@ -1,11 +1,11 @@
 /*
 项目名称：devops
-文件名称：init_tables.sql
-创建时间：2026-04-13 21:13:54
+文件名称：init_tables_v2.sql
+创建时间：2026-04-14 17:19:19
 系统用户：jerion
 作　　者：Jerion
 联系邮箱：416685476@qq.com
-功能描述：全量建表 SQL，全新部署时执行（包含所有模块表结构及初始化数据）
+功能描述：全量建表 SQL（已合并 fix_db_consistency.sql 的所有修复内容），全新部署时执行
 */
 
 -- ============================================
@@ -119,16 +119,20 @@ CREATE TABLE IF NOT EXISTS `k8s_clusters` (
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `deleted_at` datetime(3) DEFAULT NULL,
   `name` varchar(100) NOT NULL,
-  `api_server` varchar(500) NOT NULL COMMENT 'API Server地址',
   `kubeconfig` text COMMENT 'KubeConfig内容',
-  `token` text COMMENT 'Bearer Token',
-  `ca_cert` text COMMENT 'CA证书',
+  `namespace` varchar(100) DEFAULT 'default' NOT NULL COMMENT '默认命名空间',
+  `registry` varchar(500) DEFAULT '' COMMENT '镜像仓库地址',
+  `repository` varchar(200) DEFAULT '' COMMENT '镜像仓库名称',
   `description` text,
   `status` varchar(20) DEFAULT 'active' NOT NULL,
   `is_default` tinyint(1) DEFAULT 0,
+  `insecure_skip_tls` tinyint(1) DEFAULT 0 COMMENT '跳过 TLS 证书验证',
+  `check_timeout` int DEFAULT 180 NOT NULL COMMENT '健康检查超时时间(秒)',
   `created_by` bigint unsigned DEFAULT NULL,
+  `updated_by` bigint unsigned DEFAULT NULL COMMENT '更新者ID',
   PRIMARY KEY (`id`),
-  KEY `idx_k8s_deleted_at` (`deleted_at`)
+  KEY `idx_k8s_deleted_at` (`deleted_at`),
+  KEY `idx_k8s_updated_by` (`updated_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='K8s集群';
 
 -- 6. CronHPA 表
@@ -163,9 +167,9 @@ CREATE TABLE IF NOT EXISTS `feishu_apps` (
   `app_id` varchar(100) NOT NULL COMMENT '飞书 App ID',
   `app_secret` varchar(200) NOT NULL COMMENT '飞书 App Secret',
   `webhook` varchar(500) DEFAULT '' COMMENT 'Webhook URL',
-  `project` varchar(100) DEFAULT '' COMMENT '所属项目',
-  `description` varchar(500) DEFAULT '' COMMENT '描述',
-  `status` varchar(20) DEFAULT 'active' COMMENT '状态: active/inactive',
+  `project` varchar(100) NOT NULL COMMENT '所属项目',
+  `description` text COMMENT '描述',
+  `status` varchar(20) NOT NULL COMMENT '状态: active/inactive',
   `is_default` tinyint(1) DEFAULT 0 COMMENT '是否默认',
   `created_by` bigint unsigned DEFAULT 0,
   PRIMARY KEY (`id`),
@@ -182,7 +186,7 @@ CREATE TABLE IF NOT EXISTS `feishu_bots` (
   `name` varchar(100) NOT NULL COMMENT '机器人名称',
   `webhook_url` varchar(500) NOT NULL COMMENT 'Webhook URL',
   `project` varchar(100) DEFAULT '' COMMENT '所属项目',
-  `secret` varchar(200) DEFAULT '' COMMENT '签名密钥',
+  `secret` varchar(100) DEFAULT '' COMMENT '签名密钥',
   `description` varchar(500) DEFAULT '' COMMENT '描述',
   `status` varchar(20) DEFAULT 'active' COMMENT '状态: active/inactive',
   `message_template_id` bigint unsigned DEFAULT NULL COMMENT '消息模板ID',
@@ -231,10 +235,9 @@ CREATE TABLE IF NOT EXISTS `feishu_requests` (
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `deleted_at` datetime(3) DEFAULT NULL,
   `request_id` varchar(100) NOT NULL COMMENT '请求ID',
-  `type` varchar(50) DEFAULT '' COMMENT '请求类型',
-  `status` varchar(20) DEFAULT 'pending' COMMENT '状态',
-  `payload` text COMMENT '请求内容',
-  `response` text COMMENT '响应内容',
+  `original_request` text COMMENT '原始请求内容',
+  `disabled_actions` text COMMENT '禁用的操作',
+  `action_counts` text COMMENT '操作计数',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_fr_request_id` (`request_id`),
   KEY `idx_fr_deleted_at` (`deleted_at`)
@@ -248,10 +251,8 @@ CREATE TABLE IF NOT EXISTS `dingtalk_bots` (
   `name` varchar(100) NOT NULL COMMENT '机器人名称',
   `webhook_url` varchar(500) NOT NULL COMMENT 'Webhook URL',
   `secret` varchar(200) DEFAULT '' COMMENT '签名密钥',
-  `project` varchar(100) DEFAULT '' COMMENT '所属项目',
   `description` varchar(500) DEFAULT '' COMMENT '描述',
   `status` varchar(20) DEFAULT 'active' COMMENT '状态: active/inactive',
-  `message_template_id` bigint unsigned DEFAULT NULL COMMENT '消息模板ID',
   `created_by` bigint unsigned DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_dtb_status` (`status`)
@@ -330,7 +331,8 @@ CREATE TABLE IF NOT EXISTS `wechat_work_bots` (
   `status` varchar(20) DEFAULT 'active' COMMENT '状态: active/inactive',
   `created_by` bigint unsigned DEFAULT NULL COMMENT '创建人ID',
   PRIMARY KEY (`id`),
-  KEY `idx_ww_bots_status` (`status`)
+  KEY `idx_ww_bots_status` (`status`),
+  KEY `idx_wwb_created_by` (`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='企业微信机器人';
 
 -- ============================================
@@ -489,16 +491,26 @@ CREATE TABLE IF NOT EXISTS `alert_histories` (
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `deleted_at` datetime(3) DEFAULT NULL,
   `config_id` bigint unsigned NOT NULL COMMENT '告警配置ID',
-  `config_name` varchar(100) DEFAULT '' COMMENT '告警名称',
   `type` varchar(50) NOT NULL COMMENT '告警类型',
-  `target` varchar(255) DEFAULT '' COMMENT '监控目标',
+  `title` varchar(200) DEFAULT '' COMMENT '标题',
+  `content` text COMMENT '内容',
+  `level` varchar(20) DEFAULT 'warning' COMMENT '级别: info/warning/error/critical',
   `severity` varchar(20) DEFAULT 'warning' COMMENT '严重级别',
   `message` text COMMENT '告警消息',
-  `details` text COMMENT '详细信息JSON',
   `status` varchar(20) DEFAULT 'firing' COMMENT '状态: firing/resolved',
-  `notified` tinyint(1) DEFAULT 0 COMMENT '是否已通知',
-  `notified_at` datetime(3) DEFAULT NULL COMMENT '通知时间',
-  `resolved_at` datetime(3) DEFAULT NULL COMMENT '恢复时间',
+  `ack_status` varchar(20) DEFAULT 'pending' COMMENT '确认状态: pending/acked/resolved',
+  `ack_by` bigint unsigned DEFAULT NULL COMMENT '确认人ID',
+  `ack_at` datetime(3) DEFAULT NULL COMMENT '确认时间',
+  `resolved_by` bigint unsigned DEFAULT NULL COMMENT '解决人ID',
+  `resolved_at` datetime(3) DEFAULT NULL COMMENT '解决时间',
+  `resolve_comment` text COMMENT '解决备注',
+  `silenced` tinyint(1) DEFAULT 0 COMMENT '是否被静默',
+  `silence_id` bigint unsigned DEFAULT NULL COMMENT '静默规则ID',
+  `escalated` tinyint(1) DEFAULT 0 COMMENT '是否已升级',
+  `escalation_id` bigint unsigned DEFAULT NULL COMMENT '升级规则ID',
+  `error_msg` text COMMENT '错误信息',
+  `source_id` varchar(100) DEFAULT '' COMMENT '来源ID',
+  `source_url` varchar(500) DEFAULT '' COMMENT '来源URL',
   PRIMARY KEY (`id`),
   KEY `idx_alert_history_config` (`config_id`),
   KEY `idx_alert_history_status` (`status`),
@@ -571,18 +583,15 @@ CREATE TABLE IF NOT EXISTS `application_envs` (
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `app_id` bigint unsigned NOT NULL COMMENT '应用ID',
-  `env` varchar(50) NOT NULL COMMENT '环境: dev/test/staging/prod',
-  `jenkins_instance_id` bigint unsigned DEFAULT 0 COMMENT 'Jenkins实例ID',
+  `env_name` varchar(50) NOT NULL COMMENT '环境名称',
+  `branch` varchar(100) DEFAULT '' COMMENT 'Git 分支',
   `jenkins_job` varchar(200) DEFAULT '' COMMENT 'Jenkins Job名称',
-  `k8s_cluster_id` bigint unsigned DEFAULT 0 COMMENT 'K8s集群ID',
   `k8s_namespace` varchar(100) DEFAULT '' COMMENT 'K8s命名空间',
   `k8s_deployment` varchar(200) DEFAULT '' COMMENT 'K8s Deployment名称',
   `replicas` int DEFAULT 1 COMMENT '副本数',
   `config` text COMMENT '其他配置JSON',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_app_env` (`app_id`, `env`),
-  KEY `idx_env_jenkins` (`jenkins_instance_id`),
-  KEY `idx_env_k8s` (`k8s_cluster_id`)
+  UNIQUE KEY `idx_app_env` (`app_id`, `env_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用环境配置';
 
 -- 28. 部署记录表
@@ -1083,18 +1092,19 @@ CREATE TABLE IF NOT EXISTS `artifact_repositories` (
   `is_default` tinyint(1) DEFAULT 0 COMMENT '是否默认仓库',
   `is_public` tinyint(1) DEFAULT 0 COMMENT '是否公开',
   `enabled` tinyint(1) DEFAULT 1 COMMENT '是否启用',
+  `connection_status` varchar(20) DEFAULT 'unknown' COMMENT '连接状态: connected/disconnected/checking/unknown',
   `created_by` varchar(100) DEFAULT NULL COMMENT '创建人',
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `last_check_at` datetime(3) DEFAULT NULL COMMENT '最后检查时间',
-  `check_status` varchar(20) DEFAULT NULL COMMENT '连通性状态: ok/error/unknown',
-  `check_message` varchar(500) DEFAULT NULL COMMENT '检查结果消息',
-  `check_latency_ms` int DEFAULT NULL COMMENT '检查延迟(ms)',
-  `total_images` int DEFAULT 0 COMMENT '镜像总数',
-  `total_size_bytes` bigint DEFAULT 0 COMMENT '总大小(字节)',
+  `last_error` text COMMENT '最后错误信息',
+  `enable_monitoring` tinyint(1) DEFAULT 1 COMMENT '是否启用监控',
+  `check_interval` int DEFAULT 300 COMMENT '检查间隔(秒)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_name` (`name`),
-  KEY `idx_type` (`type`)
+  KEY `idx_type` (`type`),
+  KEY `idx_connection_status` (`connection_status`),
+  KEY `idx_enable_monitoring` (`enable_monitoring`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='制品仓库表';
 
 -- 53. 制品仓库连接历史表
@@ -1120,8 +1130,8 @@ CREATE TABLE IF NOT EXISTS `artifacts` (
   `artifact_id` varchar(200) DEFAULT NULL COMMENT '制品ID(Maven)',
   `type` varchar(50) DEFAULT NULL COMMENT '制品类型: jar, war, docker, npm, wheel',
   `description` varchar(500) DEFAULT NULL COMMENT '描述',
-  `latest_version` varchar(100) DEFAULT NULL COMMENT '最新版本',
-  `download_cnt` bigint DEFAULT 0 COMMENT '下载次数',
+  `latest_ver` varchar(100) DEFAULT NULL COMMENT '最新版本',
+  `download_count` bigint DEFAULT 0 COMMENT '下载次数',
   `tags` varchar(500) DEFAULT NULL COMMENT '标签(逗号分隔)',
   `created_by` varchar(100) DEFAULT NULL COMMENT '创建人',
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
@@ -1149,7 +1159,7 @@ CREATE TABLE IF NOT EXISTS `artifact_versions` (
   `git_commit` varchar(64) DEFAULT NULL COMMENT 'Git提交',
   `git_branch` varchar(100) DEFAULT NULL COMMENT 'Git分支',
   `build_number` int DEFAULT NULL COMMENT '构建号',
-  `download_cnt` bigint DEFAULT 0 COMMENT '下载次数',
+  `download_count` bigint DEFAULT 0 COMMENT '下载次数',
   `scan_status` varchar(20) DEFAULT 'pending' COMMENT '扫描状态: pending/scanning/passed/failed',
   `scan_result` json DEFAULT NULL COMMENT '扫描结果',
   `is_release` tinyint(1) DEFAULT 0 COMMENT '是否正式版本',
@@ -1587,20 +1597,16 @@ CREATE TABLE IF NOT EXISTS `ai_llm_configs` (
 -- 75. AI 消息反馈表
 CREATE TABLE IF NOT EXISTS `ai_message_feedbacks` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` bigint unsigned NOT NULL COMMENT '用户ID',
   `message_id` varchar(36) NOT NULL COMMENT '消息ID',
-  `conversation_id` varchar(36) NOT NULL COMMENT '会话ID',
-  `feedback_type` enum('like','dislike') NOT NULL COMMENT '反馈类型',
-  `comment` text COMMENT '反馈评论',
+  `user_id` bigint unsigned NOT NULL COMMENT '用户ID',
+  `rating` varchar(20) NOT NULL COMMENT '评分: like/dislike',
+  `feedback_text` text COMMENT '反馈文本',
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_ai_feedback_user_msg` (`user_id`,`message_id`),
-  KEY `idx_ai_feedback_message` (`message_id`),
-  KEY `idx_ai_feedback_conversation` (`conversation_id`),
-  KEY `idx_ai_feedback_type` (`feedback_type`),
-  CONSTRAINT `fk_ai_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_ai_feedback_msg` FOREIGN KEY (`message_id`) REFERENCES `ai_messages` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI消息反馈表';
+  KEY `idx_amf_message_id` (`message_id`),
+  KEY `idx_amf_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI消息反馈';
 
 -- ============================================
 -- 初始化数据
@@ -2369,5 +2375,218 @@ CREATE TABLE IF NOT EXISTS `pipelines` (
   PRIMARY KEY (`id`),
   KEY `idx_p_deleted_at` (`deleted_at`),
   KEY `idx_p_app_id` (`app_id`),
-  KEY `idx_p_template_id` (`template_id`)
+  KEY `idx_p_template_id` (`template_id`),
+  KEY `idx_pipelines_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='流水线';
+
+-- ============================================
+-- 流水线执行相关表（新增）
+-- ============================================
+
+-- 114. 流水线执行记录表
+CREATE TABLE IF NOT EXISTS `pipeline_runs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pipeline_id` bigint unsigned NOT NULL COMMENT '流水线ID',
+  `pipeline_name` varchar(100) DEFAULT '' COMMENT '流水线名称',
+  `status` varchar(20) NOT NULL COMMENT '状态: pending/running/success/failed/cancelled',
+  `trigger_type` varchar(20) NOT NULL COMMENT '触发类型: manual/scheduled/webhook',
+  `trigger_by` varchar(100) DEFAULT '' COMMENT '触发者',
+  `parameters_json` text COMMENT '参数 JSON',
+  `git_commit` varchar(100) DEFAULT '' COMMENT 'Git 提交 SHA',
+  `git_branch` varchar(100) DEFAULT '' COMMENT 'Git 分支',
+  `git_message` text COMMENT 'Git 提交信息',
+  `workspace_id` bigint unsigned DEFAULT NULL COMMENT '工作空间ID',
+  `started_at` datetime(3) DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime(3) DEFAULT NULL COMMENT '完成时间',
+  `duration` int DEFAULT 0 COMMENT '执行时长(秒)',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pr_pipeline` (`pipeline_id`),
+  KEY `idx_pr_status` (`status`),
+  KEY `idx_pr_created_at` (`created_at`),
+  KEY `idx_pr_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='流水线执行记录';
+
+-- 115. 阶段执行记录表
+CREATE TABLE IF NOT EXISTS `stage_runs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pipeline_run_id` bigint unsigned NOT NULL COMMENT '流水线运行ID',
+  `stage_id` varchar(50) NOT NULL COMMENT '阶段ID',
+  `stage_name` varchar(100) DEFAULT '' COMMENT '阶段名称',
+  `status` varchar(20) NOT NULL COMMENT '状态: pending/running/success/failed/cancelled',
+  `started_at` datetime(3) DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime(3) DEFAULT NULL COMMENT '完成时间',
+  `duration` int DEFAULT 0 COMMENT '执行时长(秒)',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_sr_pipeline_run` (`pipeline_run_id`),
+  KEY `idx_sr_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='阶段执行记录';
+
+-- 116. 步骤执行记录表
+CREATE TABLE IF NOT EXISTS `step_runs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `stage_run_id` bigint unsigned NOT NULL COMMENT '阶段运行ID',
+  `step_id` varchar(50) NOT NULL COMMENT '步骤ID',
+  `step_name` varchar(100) DEFAULT '' COMMENT '步骤名称',
+  `step_type` varchar(50) DEFAULT '' COMMENT '步骤类型',
+  `build_job_id` bigint unsigned DEFAULT NULL COMMENT '构建任务ID',
+  `status` varchar(20) NOT NULL COMMENT '状态: pending/running/success/failed/cancelled',
+  `logs` longtext COMMENT '日志',
+  `exit_code` int DEFAULT NULL COMMENT '退出码',
+  `started_at` datetime(3) DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime(3) DEFAULT NULL COMMENT '完成时间',
+  `duration` int DEFAULT 0 COMMENT '执行时长(秒)',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_sr_stage_run` (`stage_run_id`),
+  KEY `idx_sr_build_job` (`build_job_id`),
+  KEY `idx_sr_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='步骤执行记录';
+
+-- 117. 流水线凭证表
+CREATE TABLE IF NOT EXISTS `pipeline_credentials` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL COMMENT '凭证名称',
+  `type` varchar(50) NOT NULL COMMENT '类型: username_password/ssh_key/docker_registry/kubeconfig',
+  `description` text COMMENT '描述',
+  `data_encrypted` text NOT NULL COMMENT '加密数据',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_pc_name` (`name`),
+  KEY `idx_pc_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='流水线凭证';
+
+-- 118. 流水线环境变量表
+CREATE TABLE IF NOT EXISTS `pipeline_variables` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL COMMENT '变量名',
+  `value` text NOT NULL COMMENT '变量值',
+  `is_secret` tinyint(1) DEFAULT 0 COMMENT '是否敏感',
+  `scope` varchar(20) DEFAULT 'global' COMMENT '作用域: global/pipeline',
+  `pipeline_id` bigint unsigned DEFAULT NULL COMMENT '流水线ID',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pv_scope` (`scope`),
+  KEY `idx_pv_pipeline` (`pipeline_id`),
+  KEY `idx_pv_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='流水线环境变量';
+
+-- 119. Git 仓库配置表
+CREATE TABLE IF NOT EXISTS `git_repositories` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL COMMENT '仓库名称',
+  `url` varchar(500) NOT NULL COMMENT '仓库 URL',
+  `provider` varchar(50) DEFAULT '' COMMENT '提供商: github/gitlab/gitee/custom',
+  `default_branch` varchar(100) DEFAULT 'main' COMMENT '默认分支',
+  `credential_id` bigint unsigned DEFAULT NULL COMMENT '凭证ID',
+  `webhook_secret` varchar(100) DEFAULT '' COMMENT 'Webhook 密钥',
+  `webhook_url` varchar(500) DEFAULT '' COMMENT 'Webhook URL',
+  `description` text COMMENT '描述',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_gr_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Git 仓库配置';
+
+-- 120. 构建任务表
+CREATE TABLE IF NOT EXISTS `build_jobs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pipeline_run_id` bigint unsigned NOT NULL COMMENT '流水线运行ID',
+  `step_id` varchar(50) NOT NULL COMMENT '步骤ID',
+  `step_name` varchar(100) DEFAULT '' COMMENT '步骤名称',
+  `job_name` varchar(100) NOT NULL COMMENT 'Job 名称',
+  `namespace` varchar(100) NOT NULL COMMENT '命名空间',
+  `cluster_id` bigint unsigned NOT NULL COMMENT '集群ID',
+  `image` varchar(500) NOT NULL COMMENT '镜像',
+  `commands` text COMMENT '命令 JSON',
+  `work_dir` varchar(200) DEFAULT '/workspace' COMMENT '工作目录',
+  `env_vars` text COMMENT '环境变量 JSON',
+  `resources` text COMMENT '资源配置 JSON',
+  `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '状态: pending/running/success/failed/cancelled',
+  `pod_name` varchar(100) DEFAULT '' COMMENT 'Pod 名称',
+  `node_name` varchar(100) DEFAULT '' COMMENT '节点名称',
+  `exit_code` int DEFAULT NULL COMMENT '退出码',
+  `error_message` text COMMENT '错误信息',
+  `started_at` datetime(3) DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime(3) DEFAULT NULL COMMENT '完成时间',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_bj_pipeline_run` (`pipeline_run_id`),
+  KEY `idx_bj_cluster` (`cluster_id`),
+  KEY `idx_bj_status` (`status`),
+  KEY `idx_bj_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='构建任务';
+
+-- 121. 构建工作空间表
+CREATE TABLE IF NOT EXISTS `build_workspaces` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `pipeline_run_id` bigint unsigned NOT NULL COMMENT '流水线运行ID',
+  `cluster_id` bigint unsigned NOT NULL COMMENT '集群ID',
+  `namespace` varchar(100) NOT NULL COMMENT '命名空间',
+  `pvc_name` varchar(100) NOT NULL COMMENT 'PVC 名称',
+  `storage_size` varchar(20) DEFAULT '10Gi' COMMENT '存储大小',
+  `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '状态: pending/bound/released',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_bw_pipeline_run` (`pipeline_run_id`),
+  KEY `idx_bw_status` (`status`),
+  KEY `idx_bw_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='构建工作空间';
+
+-- 122. Webhook 日志表
+CREATE TABLE IF NOT EXISTS `webhook_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `git_repo_id` bigint unsigned NOT NULL COMMENT 'Git 仓库ID',
+  `provider` varchar(50) NOT NULL COMMENT '提供商: github/gitlab/gitee',
+  `event` varchar(50) NOT NULL COMMENT '事件类型: push/pull_request/tag',
+  `ref` varchar(200) DEFAULT '' COMMENT '引用: refs/heads/main',
+  `commit_sha` varchar(100) DEFAULT '' COMMENT '提交 SHA',
+  `payload` longtext COMMENT '请求体',
+  `status` varchar(20) NOT NULL COMMENT '状态: success/failed',
+  `pipeline_run_id` bigint unsigned DEFAULT 0 COMMENT '触发的流水线运行ID',
+  `error_msg` text COMMENT '错误信息',
+  `received_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '接收时间',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_wl_git_repo` (`git_repo_id`),
+  KEY `idx_wl_status` (`status`),
+  KEY `idx_wl_pipeline_run` (`pipeline_run_id`),
+  KEY `idx_wl_received_at` (`received_at`),
+  KEY `idx_wl_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Webhook 日志';
+
+-- 123. 制品库配置表（流水线用）
+CREATE TABLE IF NOT EXISTS `artifact_registries` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL COMMENT '名称',
+  `type` varchar(50) NOT NULL COMMENT '类型: harbor/nexus/dockerhub/acr/ecr/gcr/custom',
+  `url` varchar(500) NOT NULL COMMENT 'URL',
+  `username` varchar(100) DEFAULT '' COMMENT '用户名',
+  `password` varchar(500) DEFAULT '' COMMENT '密码',
+  `description` text COMMENT '描述',
+  `is_default` tinyint(1) DEFAULT 0 COMMENT '是否默认',
+  `status` varchar(20) DEFAULT 'unknown' COMMENT '状态: active/inactive/unknown',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_ar_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='制品库配置';
