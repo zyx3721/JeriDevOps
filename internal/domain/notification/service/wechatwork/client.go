@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -160,15 +161,17 @@ func (c *Client) SendWebhookMessage(ctx context.Context, webhookURL string, msg 
 }
 
 // SearchUser 搜索用户
+// 支持通过姓名、手机号、邮箱搜索
 func (c *Client) SearchUser(ctx context.Context, query string) ([]UserInfo, error) {
 	token, err := c.GetAccessToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	searchURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token=%s&department_id=1&fetch_child=1", token)
+	// 先获取部门用户列表（简单信息）
+	listURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/user/simplelist?access_token=%s&department_id=1&fetch_child=1", token)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", listURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request failed: %w", err)
 	}
@@ -191,21 +194,102 @@ func (c *Client) SearchUser(ctx context.Context, query string) ([]UserInfo, erro
 
 	var users []UserInfo
 	if userList, ok := result["userlist"].([]any); ok {
+		c.logger.Info("Total users in simplelist: %d", len(userList))
+
+		// 遍历用户列表，获取详细信息
 		for _, item := range userList {
 			if u, ok := item.(map[string]any); ok {
-				name := getString(u, "name")
-				if query == "" || containsIgnoreCase(name, query) {
-					user := UserInfo{
-						UserID: getString(u, "userid"),
-						Name:   name,
-					}
-					users = append(users, user)
+				userid := getString(u, "userid")
+				if userid == "" {
+					continue
+				}
+
+				// 获取用户详细信息（包含手机号、邮箱）
+				userDetail, err := c.getUserDetail(ctx, token, userid)
+				if err != nil {
+					c.logger.Error("Failed to get user detail for %s: %v (可能是应用权限不足)", userid, err)
+					// 如果获取详情失败，使用简单信息
+					users = append(users, UserInfo{
+						UserID: userid,
+						Name:   getString(u, "name"),
+						Mobile: "",
+						Email:  "",
+					})
+					continue
+				}
+
+				// 支持姓名、手机号、邮箱搜索（不区分大小写）
+				queryLower := toLower(query)
+				if query == "" ||
+					containsIgnoreCaseChinese(userDetail.Name, queryLower) ||
+					containsIgnoreCaseChinese(userDetail.Mobile, queryLower) ||
+					containsIgnoreCaseChinese(userDetail.Email, queryLower) ||
+					containsIgnoreCaseChinese(userDetail.UserID, queryLower) {
+					users = append(users, userDetail)
 				}
 			}
 		}
 	}
 
+	c.logger.Info("Found %d users for query: %s", len(users), query)
 	return users, nil
+}
+
+// getUserDetail 获取用户详细信息
+func (c *Client) getUserDetail(ctx context.Context, token, userid string) (UserInfo, error) {
+	detailURL := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=%s&userid=%s", token, userid)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", detailURL, nil)
+	if err != nil {
+		return UserInfo{}, fmt.Errorf("create request failed: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return UserInfo{}, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return UserInfo{}, fmt.Errorf("decode response failed: %w", err)
+	}
+
+	if errcode, ok := result["errcode"].(float64); ok && errcode != 0 {
+		errmsg, _ := result["errmsg"].(string)
+		return UserInfo{}, fmt.Errorf("API error: %v - %s", errcode, errmsg)
+	}
+
+	name := getString(result, "name")
+	mobile := getString(result, "mobile")
+	email := getString(result, "email")
+
+	c.logger.Info("User detail: userid=%s, name=%s, mobile=%s, email=%s", userid, name, mobile, email)
+
+	user := UserInfo{
+		UserID: userid,
+		Name:   name,
+		Mobile: mobile,
+		Email:  email,
+	}
+
+	// 获取头像
+	if avatar, ok := result["avatar"].(string); ok {
+		user.Avatar = avatar
+	}
+
+	// 获取部门信息
+	if depts, ok := result["department"].([]any); ok {
+		departments := make([]int, 0, len(depts))
+		for _, d := range depts {
+			if deptID, ok := d.(float64); ok {
+				departments = append(departments, int(deptID))
+			}
+		}
+		user.Department = departments
+	}
+
+	return user, nil
 }
 
 func getString(m map[string]any, key string) string {
@@ -215,8 +299,16 @@ func getString(m map[string]any, key string) string {
 	return ""
 }
 
-func containsIgnoreCase(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0)
+func toLower(s string) string {
+	return strings.ToLower(s)
+}
+
+func containsIgnoreCaseChinese(s, substrLower string) bool {
+	if substrLower == "" {
+		return true
+	}
+	sLower := strings.ToLower(s)
+	return strings.Contains(sLower, substrLower)
 }
 
 // GetLogger 获取日志记录器
