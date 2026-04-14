@@ -229,13 +229,15 @@ CREATE TABLE IF NOT EXISTS `feishu_requests` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `request_id` varchar(100) NOT NULL COMMENT '请求ID',
   `type` varchar(50) DEFAULT '' COMMENT '请求类型',
   `status` varchar(20) DEFAULT 'pending' COMMENT '状态',
   `payload` text COMMENT '请求内容',
   `response` text COMMENT '响应内容',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_fr_request_id` (`request_id`)
+  UNIQUE KEY `idx_fr_request_id` (`request_id`),
+  KEY `idx_fr_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='飞书请求记录';
 
 -- 12. 钉钉机器人表
@@ -485,6 +487,7 @@ CREATE TABLE IF NOT EXISTS `alert_configs` (
 CREATE TABLE IF NOT EXISTS `alert_histories` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `config_id` bigint unsigned NOT NULL COMMENT '告警配置ID',
   `config_name` varchar(100) DEFAULT '' COMMENT '告警名称',
   `type` varchar(50) NOT NULL COMMENT '告警类型',
@@ -499,7 +502,8 @@ CREATE TABLE IF NOT EXISTS `alert_histories` (
   PRIMARY KEY (`id`),
   KEY `idx_alert_history_config` (`config_id`),
   KEY `idx_alert_history_status` (`status`),
-  KEY `idx_alert_history_created` (`created_at`)
+  KEY `idx_alert_history_created` (`created_at`),
+  KEY `idx_ah_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='告警历史';
 
 -- 25. 日志告警历史表
@@ -674,6 +678,7 @@ CREATE TABLE IF NOT EXISTS `health_check_configs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `name` varchar(100) NOT NULL COMMENT '检查名称',
   `url` varchar(500) NOT NULL COMMENT '检查URL',
   `method` varchar(10) DEFAULT 'GET' COMMENT '请求方法',
@@ -688,13 +693,15 @@ CREATE TABLE IF NOT EXISTS `health_check_configs` (
   `description` varchar(500) DEFAULT '',
   `created_by` bigint unsigned DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `idx_hcc_enabled` (`enabled`)
+  KEY `idx_hcc_enabled` (`enabled`),
+  KEY `idx_hcc_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='健康检查配置';
 
 -- 32. 健康检查历史表
 CREATE TABLE IF NOT EXISTS `health_check_histories` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `config_id` bigint unsigned NOT NULL COMMENT '检查配置ID',
   `status` varchar(20) DEFAULT 'success' COMMENT '状态: success/failed',
   `status_code` int DEFAULT 0 COMMENT '响应状态码',
@@ -704,7 +711,8 @@ CREATE TABLE IF NOT EXISTS `health_check_histories` (
   PRIMARY KEY (`id`),
   KEY `idx_hch_config` (`config_id`),
   KEY `idx_hch_status` (`status`),
-  KEY `idx_hch_checked` (`checked_at`)
+  KEY `idx_hch_checked` (`checked_at`),
+  KEY `idx_hch_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='健康检查历史';
 
 -- ============================================
@@ -1118,11 +1126,13 @@ CREATE TABLE IF NOT EXISTS `artifacts` (
   `created_by` varchar(100) DEFAULT NULL COMMENT '创建人',
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_repository_id` (`repository_id`),
   KEY `idx_name` (`name`),
   KEY `idx_group_id` (`group_id`),
-  KEY `idx_artifact_id` (`artifact_id`)
+  KEY `idx_artifact_id` (`artifact_id`),
+  KEY `idx_artifacts_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='制品表';
 
 -- 55. 制品版本表
@@ -2003,6 +2013,7 @@ CREATE TABLE IF NOT EXISTS `cost_summaries` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `cluster_id` bigint unsigned DEFAULT NULL COMMENT '集群ID',
   `namespace` varchar(100) DEFAULT '' COMMENT '命名空间',
   `period` varchar(20) NOT NULL COMMENT '统计周期: daily/weekly/monthly',
@@ -2014,6 +2025,7 @@ CREATE TABLE IF NOT EXISTS `cost_summaries` (
   PRIMARY KEY (`id`),
   KEY `idx_cs_cluster_id` (`cluster_id`),
   KEY `idx_cs_period_date` (`period_date`),
+  KEY `idx_cs_deleted_at` (`deleted_at`),
   UNIQUE KEY `idx_cs_unique` (`cluster_id`, `namespace`, `period`, `period_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='成本汇总';
 
@@ -2078,6 +2090,7 @@ CREATE TABLE IF NOT EXISTS `cost_alerts` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `budget_id` bigint unsigned NOT NULL COMMENT '预算ID',
   `alert_type` varchar(50) NOT NULL COMMENT '告警类型: threshold/anomaly',
   `current_cost` decimal(14,4) DEFAULT 0.0000 COMMENT '当前成本',
@@ -2087,13 +2100,15 @@ CREATE TABLE IF NOT EXISTS `cost_alerts` (
   `status` varchar(20) DEFAULT 'firing' COMMENT '状态: firing/resolved',
   PRIMARY KEY (`id`),
   KEY `idx_ca_budget_id` (`budget_id`),
-  KEY `idx_ca_status` (`status`)
+  KEY `idx_ca_status` (`status`),
+  KEY `idx_ca_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='成本告警记录';
 
 -- 100. 资源活动记录表
 CREATE TABLE IF NOT EXISTS `resource_activities` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `cluster_id` bigint unsigned DEFAULT NULL COMMENT '集群ID',
   `resource_type` varchar(50) NOT NULL COMMENT '资源类型',
   `resource_name` varchar(200) NOT NULL COMMENT '资源名称',
@@ -2104,7 +2119,8 @@ CREATE TABLE IF NOT EXISTS `resource_activities` (
   PRIMARY KEY (`id`),
   KEY `idx_ra_cluster_id` (`cluster_id`),
   KEY `idx_ra_resource_type` (`resource_type`),
-  KEY `idx_ra_created_at` (`created_at`)
+  KEY `idx_ra_created_at` (`created_at`),
+  KEY `idx_ra_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资源活动记录';
 
 -- 101. 流量规则模板表
@@ -2191,6 +2207,7 @@ CREATE TABLE IF NOT EXISTS `image_scans` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `registry_id` bigint unsigned DEFAULT NULL COMMENT '仓库ID',
   `image_name` varchar(300) NOT NULL COMMENT '镜像名称',
   `image_tag` varchar(100) DEFAULT '' COMMENT '镜像标签',
@@ -2204,7 +2221,8 @@ CREATE TABLE IF NOT EXISTS `image_scans` (
   `scanned_at` datetime(3) DEFAULT NULL COMMENT '扫描时间',
   PRIMARY KEY (`id`),
   KEY `idx_is_registry_id` (`registry_id`),
-  KEY `idx_is_scan_status` (`scan_status`)
+  KEY `idx_is_scan_status` (`scan_status`),
+  KEY `idx_is_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='镜像扫描结果';
 
 -- 107. 合规规则表
@@ -2232,6 +2250,7 @@ CREATE TABLE IF NOT EXISTS `config_checks` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `cluster_id` bigint unsigned DEFAULT NULL COMMENT '集群ID',
   `rule_id` bigint unsigned NOT NULL COMMENT '合规规则ID',
   `resource_type` varchar(50) DEFAULT '' COMMENT '资源类型',
@@ -2243,13 +2262,15 @@ CREATE TABLE IF NOT EXISTS `config_checks` (
   PRIMARY KEY (`id`),
   KEY `idx_cc_cluster_id` (`cluster_id`),
   KEY `idx_cc_rule_id` (`rule_id`),
-  KEY `idx_cc_status` (`status`)
+  KEY `idx_cc_status` (`status`),
+  KEY `idx_cc_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配置合规检查记录';
 
 -- 109. 安全审计日志表
 CREATE TABLE IF NOT EXISTS `security_audit_logs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   `user_id` bigint unsigned DEFAULT NULL COMMENT '操作用户ID',
   `username` varchar(100) DEFAULT '' COMMENT '用户名',
   `action` varchar(100) NOT NULL COMMENT '操作动作',
@@ -2264,7 +2285,8 @@ CREATE TABLE IF NOT EXISTS `security_audit_logs` (
   PRIMARY KEY (`id`),
   KEY `idx_sal_user_id` (`user_id`),
   KEY `idx_sal_action` (`action`),
-  KEY `idx_sal_created_at` (`created_at`)
+  KEY `idx_sal_created_at` (`created_at`),
+  KEY `idx_sal_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='安全审计日志';
 
 -- 110. 安全报告表
