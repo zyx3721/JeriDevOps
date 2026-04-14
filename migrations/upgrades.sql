@@ -562,3 +562,51 @@ ALTER TABLE `config_checks`
   ADD COLUMN IF NOT EXISTS `passed_count` int DEFAULT 0 COMMENT '通过数' AFTER `low_count`;
 
 CREATE INDEX IF NOT EXISTS `idx_cc_checked_at` ON `config_checks`(`checked_at`);
+
+-- ============================================
+-- 10. 修复 test.log 中的字段缺失问题（2026-04-14）
+-- ============================================
+
+-- 10.1 health_check_configs 表补充字段
+ALTER TABLE `health_check_configs`
+  ADD COLUMN IF NOT EXISTS `type` varchar(50) DEFAULT 'http' COMMENT '检查类型: http/tcp/ssl_cert/dns' AFTER `name`,
+  ADD COLUMN IF NOT EXISTS `cert_days_remaining` int DEFAULT NULL COMMENT 'SSL证书剩余天数' AFTER `last_checked_at`,
+  ADD COLUMN IF NOT EXISTS `last_alert_level` varchar(20) DEFAULT NULL COMMENT '最后告警级别: info/warning/error/critical' AFTER `cert_days_remaining`;
+
+CREATE INDEX IF NOT EXISTS `idx_hcc_type` ON `health_check_configs`(`type`);
+CREATE INDEX IF NOT EXISTS `idx_hcc_cert_days` ON `health_check_configs`(`cert_days_remaining`);
+CREATE INDEX IF NOT EXISTS `idx_hcc_alert_level` ON `health_check_configs`(`last_alert_level`);
+
+-- 10.2 log_saved_queries 表补充字段
+ALTER TABLE `log_saved_queries`
+  ADD COLUMN IF NOT EXISTS `is_shared` tinyint(1) DEFAULT 0 COMMENT '是否共享给团队' AFTER `is_public`;
+
+CREATE INDEX IF NOT EXISTS `idx_lsq_is_shared` ON `log_saved_queries`(`is_shared`);
+
+-- 10.3 resource_costs 表补充字段
+ALTER TABLE `resource_costs`
+  ADD COLUMN IF NOT EXISTS `recorded_at` datetime(3) DEFAULT NULL COMMENT '成本记录时间' AFTER `period_end`,
+  ADD COLUMN IF NOT EXISTS `app_name` varchar(100) DEFAULT '' COMMENT '应用名称' AFTER `resource_name`,
+  ADD COLUMN IF NOT EXISTS `team_name` varchar(100) DEFAULT '' COMMENT '团队名称' AFTER `app_name`,
+  ADD COLUMN IF NOT EXISTS `cpu_usage` decimal(10,2) DEFAULT 0.00 COMMENT 'CPU 实际使用量(核)' AFTER `cpu_request`,
+  ADD COLUMN IF NOT EXISTS `cpu_limit` decimal(10,2) DEFAULT 0.00 COMMENT 'CPU 限制量(核)' AFTER `cpu_usage`,
+  ADD COLUMN IF NOT EXISTS `memory_usage` decimal(10,2) DEFAULT 0.00 COMMENT '内存实际使用量(GB)' AFTER `memory_request`,
+  ADD COLUMN IF NOT EXISTS `memory_limit` decimal(10,2) DEFAULT 0.00 COMMENT '内存限制量(GB)' AFTER `memory_usage`,
+  ADD COLUMN IF NOT EXISTS `storage_size` decimal(10,2) DEFAULT 0.00 COMMENT '存储大小(GB)' AFTER `memory_limit`;
+
+CREATE INDEX IF NOT EXISTS `idx_rc_recorded_at` ON `resource_costs`(`recorded_at`);
+CREATE INDEX IF NOT EXISTS `idx_rc_app_name` ON `resource_costs`(`app_name`);
+CREATE INDEX IF NOT EXISTS `idx_rc_team_name` ON `resource_costs`(`team_name`);
+
+-- 10.4 为现有数据初始化字段值
+UPDATE `health_check_configs`
+SET `type` = CASE
+  WHEN `url` LIKE 'https://%' OR `url` LIKE 'http://%' THEN 'http'
+  WHEN `url` LIKE 'tcp://%' THEN 'tcp'
+  ELSE 'http'
+END
+WHERE `type` IS NULL OR `type` = '';
+
+UPDATE `resource_costs`
+SET `recorded_at` = `created_at`
+WHERE `recorded_at` IS NULL;
