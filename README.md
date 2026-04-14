@@ -1,4 +1,4 @@
-# 企业级 DevOps 运维平台
+# DevOps 运维平台
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8.svg)
@@ -9,38 +9,63 @@
 
 一个企业级的一站式 DevOps 管理平台，旨在简化 Kubernetes 运维、CI/CD 流水线、流量治理和可观测性。基于现代技术栈构建，支持高性能和可扩展的软件交付。
 
-## ✨ 核心功能
+# 一、项目介绍
 
-- **☸️ Kubernetes 管理**: 支持多集群管理、工作负载管理（Deployments, Pods, Services）、Web 终端和实时日志查看。
-- **🚀 CI/CD 流水线**: 深度集成 Jenkins，提供可视化的流水线模板、制品管理和自动化的构建/部署工作流。
-- **🚦 流量治理**: 提供高级流量控制策略，包括金丝雀发布、熔断、限流和负载均衡（兼容 Istio）。
-- **🤖 AI Copilot**: 智能 DevOps 助手，用于自动化故障排查、日志分析和运维指导。
-- **👀 可观测性与告警**: 集成 Prometheus/Grafana 监控，支持灵活的告警规则和多渠道通知（飞书、钉钉、企业微信）。
-- **🛡️ 安全与 RBAC**: 细粒度的基于角色的访问控制（RBAC）、审计日志和安全资源管理。
-- **💰 成本管理**: 资源成本统计、预算管理和优化建议。
-- **🔒 合规检查**: 镜像扫描、配置合规检测和安全报告。
+## 1.1 关于
 
-## 🛠 技术栈
+DevOps 运维平台是一个企业级的一站式运维管理系统，围绕云原生基础设施和持续交付，提供完整的 DevOps 工具链。
 
-### 后端
-- **语言**: Go 1.25+
-- **框架**: Gin Web Framework
-- **数据库**: MySQL 8.0+ (GORM)
+把 Kubernetes 管理、CI/CD 流水线、监控告警、流量治理拆分成清晰的功能模块，让运维工作既能保持高效性，也能维持长期可维护性。
+
+| 模块 | 技术栈 | 定位 |
+| --- | --- | --- |
+| `server` | Go 1.25 / Gin / GORM / MySQL | 后端服务、认证、接口、数据与定时任务 |
+| `web` | Vue 3 / Ant Design Vue / Element Plus / Vite | 运维管理、仪表盘、可视化、操作后台 |
+
+**为什么选择 DevOps 运维平台**
+
+- 有完整工程结构，而不是只做出一个页面展示
+- 多集群管理与工作负载管理解耦，运维体验更纯粹
+- 支持 Kubernetes、Jenkins、监控告警等运维常见能力
+- 适合企业级运维管理，也适合继续扩展成 PaaS 平台
+
+## 1.2 核心功能
+
+- **☸️ Kubernetes 管理**: 支持多集群管理、工作负载管理（Deployments, Pods, Services）、Web 终端和实时日志查看
+- **🚀 CI/CD 流水线**: 深度集成 Jenkins，提供可视化的流水线模板、制品管理和自动化的构建/部署工作流
+- **🚦 流量治理**: 提供高级流量控制策略，包括金丝雀发布、熔断、限流和负载均衡（兼容 Istio）
+- **🤖 AI Copilot**: 智能 DevOps 助手，用于自动化故障排查、日志分析和运维指导
+- **👀 可观测性与告警**: 集成 Prometheus/Grafana 监控，支持灵活的告警规则和多渠道通知（飞书、钉钉、企业微信）
+- **🛡️ 安全与 RBAC**: 细粒度的基于角色的访问控制（RBAC）、审计日志和安全资源管理
+- **💰 成本管理**: 资源成本统计、预算管理和优化建议
+- **🔒 合规检查**: 镜像扫描、配置合规检测和安全报告
+
+## 1.3 技术栈
+
+### 1.3.1 Server - 服务端
+
+- **语言**: [Go 1.25](https://golang.org)
+- **框架**: [Gin](https://github.com/gin-gonic/gin)
+- **ORM**: [GORM](https://gorm.io)
+- **数据库**: MySQL 8.0+
 - **缓存**: Redis 6.0+
 - **基础设施**: Kubernetes Client-go, OpenTelemetry
-- **文档**: Swagger (Swaggo)
+- **API 文档**: Swagger (Swaggo)
 
-### 前端
-- **框架**: Vue 3 + TypeScript
-- **构建工具**: Vite
-- **UI 组件库**: Ant Design Vue, Element Plus
-- **状态管理**: Pinia
+### 1.3.2 Web - 前端
+
+- **框架**: [Vue 3](https://vuejs.org) + [Vite](https://vitejs.dev)
+- **UI 组件**: [Ant Design Vue](https://antdv.com), [Element Plus](https://element-plus.org)
+- **状态管理**: [Pinia](https://pinia.vuejs.org)
 - **可视化**: ECharts, XTerm.js (Web 终端)
+- **其他**: TypeScript, Vue Router, Axios, dayjs
 
-## 📂 项目结构
+## 1.4 目录结构
 
-```
-devops/
+### 1.4.1 Server
+
+```bash
+server/
 ├── cmd/
 │   └── server/             # 应用程序入口 (main.go)
 ├── internal/               # 私有应用程序代码
@@ -54,32 +79,140 @@ devops/
 │   ├── init_tables.sql     # 全量建表（113 张表）
 │   └── upgrades.sql        # 存量数据库升级补丁
 ├── pkg/                    # 公共库 (utils, errors, logger, response)
-├── web/                    # 前端 Vue.js 应用
 ├── docs/                   # Swagger API 文档
-├── .env.example            # 环境变量模板
-└── go.mod                  # Go 模块定义
+└── go.mod
 ```
 
-## 🚀 快速开始
+### 1.4.2 Web
 
-### 前置要求
+```bash
+web/
+├── src/
+│   ├── api/              # API 接口
+│   ├── assets/           # 静态资源
+│   ├── components/       # 公共组件
+│   ├── router/           # 路由配置
+│   ├── types/            # TypeScript 类型定义
+│   ├── utils/            # 工具函数
+│   ├── views/            # 页面组件
+│   ├── App.vue           # 根组件
+│   └── main.ts           # 入口文件
+├── public/               # 公共文件
+├── index.html            # HTML 模板
+└── vite.config.ts        # Vite 配置
+```
 
-| 依赖 | 最低版本 | 说明 |
-|------|---------|------|
-| Go | 1.25+ | 后端运行环境 |
-| Node.js | 18.0+ | 前端构建环境 |
-| MySQL | 8.0+ | 主数据库，需 utf8mb4 字符集 |
-| Redis | 6.0+ | 缓存与会话存储 |
-| Kubernetes | 1.20+ | 可选，完整功能需要运行中的集群 |
+## 1.5 特性
 
-### 1. 数据库初始化
+### 1.5.1 API 文档
+
+服务启动后，访问以下地址查看 API 文档：
+
+```bash
+http://localhost:8080/swagger/index.html
+```
+
+### 1.5.2 多集群管理
+
+支持同时管理多个 Kubernetes 集群，统一视图查看所有集群资源状态。
+
+### 1.5.3 Web 终端
+
+内置 Web 终端，支持直接在浏览器中连接 Pod 执行命令，无需本地安装 kubectl。
+
+# 二、环境要求
+
+| 依赖       | 版本要求 | 说明                           |
+| :--------- | :------- | :----------------------------- |
+| Go         | >= 1.25  | 后端运行环境                   |
+| Node.js    | >= 18    | 前端构建环境                   |
+| MySQL      | >= 8.0   | 主数据库，需 utf8mb4 字符集    |
+| Redis      | >= 6.0   | 缓存与会话存储                 |
+| Kubernetes | >= 1.20  | 可选，完整功能需要运行中的集群 |
+
+# 三、本地开发快速启动
+
+## 3.1 环境要求
+
+- **Node.js** >= 18 (web)
+- **Go** >= 1.25 (server)
+- **MySQL** >= 8.0 (server)
+- **Redis** >= 6.0 (server)
+
+> 如果本地没有安装部署 MySQL 和 Redis，可参考以下 docker 快速部署相关数据库（可选）。
+
+创建 `mysql` 容器：
+
+```bash
+docker run -d --name devops-mysql \
+  -p 3306:3306 \
+  --privileged=true \
+  -v /data/MySqlData:/var/lib/mysql \
+  -e MYSQL_ROOT_PASSWORD="123456ok!" \
+  -e MYSQL_DATABASE="devops" \
+  -e TZ=Asia/Shanghai \
+  mysql:8.0.34 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_unicode_ci
+```
+
+创建 `redis` 容器：
+
+```bash
+docker run -d --name devops-redis \
+  -p 6379:6379 \
+  -v /data/redisData:/data \
+  -e REDIS_PASSWORD=123456 \
+  -e TZ=Asia/Shanghai \
+  redis:7-alpine \
+  redis-server --requirepass 123456 --appendonly yes
+```
+
+查看是否创建成功：
+
+```bash
+[root@docker-server ~]# docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+22205f8e78c6   mysql:8.0.34      "docker-entrypoint.s…"   34 minutes ago   Up 34 minutes   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp   devops-mysql
+33316g9f89d7   redis:7-alpine "docker-entrypoint.s…"   34 minutes ago   Up 34 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   devops-redis
+```
+
+## 3.2 克隆项目
+
+```bash
+git clone https://github.com/zyx3721/JeriDevOps.git /data/devops
+cd /data/devops
+```
+
+## 3.3 数据库配置
+
+### 3.3.1 本地数据库创建
+
+创建 MySQL 数据库：
+
+```bash
+mysql -h 127.0.0.1 -u root -p -e "CREATE DATABASE IF NOT EXISTS devops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+### 3.3.2 容器数据库创建
+
+进入容器内的 mysql 交互界面：
+
+```bash
+docker exec -it devops-mysql mysql -u root -p
+```
+
+在 mysql 中创建 devops 库（执行后输入 `exit` 退出）：
+
+```bash
+CREATE DATABASE IF NOT EXISTS devops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### 3.3.3 初始化数据库
 
 **全新部署**：
 
 ```bash
-# 创建数据库
-mysql -h 127.0.0.1 -u root -p -e "CREATE DATABASE IF NOT EXISTS devops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
 # 初始化所有表结构和初始数据（113 张表）
 mysql -h 127.0.0.1 -u root -p devops < migrations/init_tables.sql
 ```
@@ -98,43 +231,216 @@ mysql -h 127.0.0.1 -u root -p devops < migrations/init_tables.sql
 mysql -h 127.0.0.1 -u root -p devops < migrations/upgrades.sql
 ```
 
-详细说明见 [migrations/README.md](migrations/README.md)。
+详细说明见 [migrations/README.md](migrations/README.md) 。
 
-### 2. 后端启动
+## 3.4 后端配置与启动
+
+> 如果没有配置 go 的镜像代理，可以参考 [Go 国内加速：Go 国内加速镜像 | Go 技术论坛](https://learnku.com/go/wikis/38122)。
+
+1. 下载相关依赖：
 
 ```bash
-# 下载依赖
 go mod download
-
-# 复制并编辑环境变量
-cp .env.example .env
-# 按实际情况修改 .env 中的数据库、Redis、K8s 等配置
-
-# 启动服务
-go run cmd/server/main.go
 ```
 
-- 后端服务默认监听：`http://localhost:8080`
-- Swagger 文档地址：`http://localhost:8080/swagger/index.html`
+2. 配置环境变量：
 
-### 3. 前端启动
+```bash
+# 步骤1：复制模板文件
+cp .env.example .env
+
+# 步骤2：编辑 .env，配置数据库连接等信息
+vim .env
+```
+
+`.env` 配置示例：
+
+```bash
+# 服务器配置
+PORT=8080
+LOG_LEVEL=info
+
+# 数据库配置
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_database_password
+MYSQL_DATABASE=devops
+
+# Redis 配置
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# JWT 配置
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRATION=24
+```
+
+3. 运行后端服务：
+
+```bash
+# 方式1：前台运行（终端关闭则服务停止）
+go run cmd/server/main.go
+
+# 方式2：后台运行（日志输出到 app.log）
+nohup go run cmd/server/main.go > app.log 2>&1 &
+```
+
+后端服务默认运行在 `http://localhost:8080`，如需指定端口，请修改环境变量文件内的 `PORT` 参数。
+
+## 3.5 前端配置与启动
+
+1. 进入前端目录下载相关依赖：
 
 ```bash
 cd web
 npm install
-npm run dev
 ```
 
-前端开发服务器默认监听：`http://localhost:5173`
-
-### 4. Docker 一键启动
+2. 配置 API 地址（可选）：
 
 ```bash
-# 在项目根目录执行
-docker-compose up --build -d
+# 配置说明：
+# - 后端端口 = 8080：无需创建 .env 文件（默认值为 http://localhost:8080）
+# - 后端端口 ≠ 8080：需要创建 .env 文件（指定正确端口，例如后端端口改为 8090）
+#   创建 .env 文件，例如：
+echo "VITE_DEV_PROXY_TARGET=http://localhost:8090" > .env
 ```
 
-## ⚙️ 环境变量配置
+3. 启动前端服务：
+
+```bash
+# 方式1：前台运行（终端关闭则服务停止）
+npm run dev
+
+# 方式2：后台运行（日志输出到 web.log）
+nohup npm run dev > web.log 2>&1 &
+```
+
+前端服务默认运行在 `http://localhost:3000` 。
+
+## 3.6 访问系统
+
+- **前端页面**：`http://localhost:3000`
+- **API 文档**：`http://localhost:8080/swagger/index.html`
+- **默认管理员账户**：`admin`
+- **默认管理员密码**：`admin123`
+
+# 四、Docker Compose 快速部署（推荐）
+
+## 4.1 部署目录结构
+
+所有相关文件统一放在 `deploy/` 目录下，单镜像包含前端（Nginx）、后端（devops），通过 supervisord 管理多进程。
+
+```bash
+deploy/
+├── docker-compose.yaml    # 服务编排配置
+├── Dockerfile             # 镜像构建配置
+├── nginx.conf             # Nginx 配置
+├── supervisord.conf       # 进程管理配置
+├── entrypoint.sh          # 容器启动脚本
+├── .env                   # 环境变量（需自行创建，见 4.2）
+├── DevOpsData/            # 应用持久化数据（首次启动自动创建）
+│   └── logs/              # 运行日志
+├── MySqlData/             # MySQL 数据（首次启动自动创建）
+└── redisData/             # Redis 数据（首次启动自动创建）
+```
+
+## 4.2 准备配置文件
+
+进入 `deploy` 目录，创建 `.env` 环境变量文件：
+
+```bash
+cd deploy
+vim .env
+```
+
+`.env` 文件内容参考：
+
+```bash
+# 数据库配置
+MYSQL_PASSWORD=your_database_password
+MYSQL_DATABASE=devops
+
+# Redis 配置（如需密码）
+REDIS_PASSWORD=
+
+# JWT 配置
+JWT_SECRET=your_jwt_secret_key
+
+# 服务器配置
+PORT=8080
+LOG_LEVEL=info
+```
+
+## 4.3 构建镜像（可选）
+
+如果不想使用阿里云镜像仓库的镜像，可直接在本地手动构建（默认使用阿里云镜像仓库地址）：
+
+```bash
+# 在 deploy/ 目录下构建（构建上下文为项目根目录）
+cd deploy
+docker build -t devops:latest -f Dockerfile ..
+```
+
+然后修改 `deploy/docker-compose.yaml` 中 `devops` 服务的 `image` 字段为 `devops:latest`。
+
+## 4.4 启动服务
+
+`docker-compose.yaml` 支持两种模式，按需选择：
+
+**模式一：新建 MySQL 和 Redis 容器（默认）**
+
+首次启动会自动创建 `devops` 数据库：
+
+```bash
+cd deploy
+docker compose up -d
+```
+
+**模式二：使用已有容器**
+
+`.env` 环境变量文件中确保数据库配置填入已有容器地址，并编辑 `deploy/docker-compose.yaml`：
+
+1. 注释掉 `mysql` 和 `redis` 服务块
+2. 注释掉 `devops.depends_on` 块
+
+```bash
+cd deploy
+docker compose up -d
+```
+
+## 4.5 服务管理
+
+```bash
+# 查看服务状态
+docker compose ps
+
+# 查看实时日志
+docker compose logs -f devops
+
+# 重启 devops 服务
+docker compose restart devops
+
+# 停止所有服务
+docker compose down
+
+# 停止并删除数据卷（谨慎！数据会丢失）
+docker compose down -v
+```
+
+## 4.6 访问系统
+
+服务启动后，访问以下地址：
+
+- **前端页面**：`http://your-domain.com`
+- **API 文档**：`http://your-domain.com/swagger/index.html`
+- **健康检查**：`http://your-domain.com/health`
+- **默认管理员账户**：`admin`
+- **默认管理员密码**：`admin123`
+
+# 五、环境变量配置
 
 应用启动时会从当前目录向上递归查找 `.env` 文件并自动加载，也支持直接设置系统环境变量。
 
@@ -144,19 +450,19 @@ docker-compose up --build -d
 cp .env.example .env
 ```
 
-### 服务器配置
+## 5.1 服务器配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `PORT` | `8080` | HTTP 监听端口 |
 | `LOG_LEVEL` | `info` | 日志级别：`debug` / `info` / `warn` / `error` |
 | `DEBUG` | `false` | 调试模式，`true` 时输出 Gin 路由信息和 SQL 日志 |
-| `VERSION` | `1.0.0` | 服务版本号，显示在飞书管理页面右上角，便于区分部署版本 |
+| `VERSION` | `1.0.0` | 服务版本号，显示在管理页面右上角，便于区分部署版本 |
 | `READ_TIMEOUT` | `10` | HTTP 读取超时（秒） |
 | `WRITE_TIMEOUT` | `10` | HTTP 写入超时（秒） |
 | `SHUTDOWN_TIMEOUT` | `5` | 优雅关闭等待时间（秒） |
 
-### MySQL 配置
+## 5.2 MySQL 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -169,7 +475,7 @@ cp .env.example .env
 | `MYSQL_MAX_OPEN_CONNS` | `100` | 连接池最大打开连接数 |
 | `MYSQL_CONN_MAX_LIFETIME` | `3600` | 连接最大存活时间（秒） |
 
-### Redis 配置
+## 5.3 Redis 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -179,7 +485,7 @@ cp .env.example .env
 | `REDIS_POOL_SIZE` | `10` | 连接池最大连接数 |
 | `REDIS_MIN_IDLE_CONNS` | `5` | 连接池最小空闲连接数 |
 
-### Jenkins 配置
+## 5.4 Jenkins 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -187,7 +493,7 @@ cp .env.example .env
 | `JENKINS_USER` | `admin` | Jenkins 用户名 |
 | `JENKINS_TOKEN` | — | Jenkins API Token |
 
-### Kubernetes 配置
+## 5.5 Kubernetes 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -197,7 +503,7 @@ cp .env.example .env
 | `K8S_REGISTRY` | — | 默认镜像仓库地址（预留） |
 | `K8S_REPOSITORY` | — | 默认镜像仓库名称（预留） |
 
-### 飞书配置
+## 5.6 飞书配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -220,7 +526,7 @@ cp .env.example .env
 > - 如果只有一个飞书应用，在 `.env` 填写即可，同时也在页面上录入一份，供 Jenkins/K8s 绑定使用。
 > - 如果有多个飞书应用（多团队），通过页面统一管理，`.env` 填写一个兜底的默认应用。
 
-### 飞书应用权限配置
+## 5.7 飞书应用权限配置
 
 在[飞书开发者后台](https://open.feishu.cn/app)创建应用后，需开通以下权限，否则相关功能将报错：
 
@@ -242,7 +548,7 @@ cp .env.example .env
 
 > **注意**：修改权限后必须**重新发布应用版本**才能生效。
 
-### 飞书 OAuth 授权（按姓名搜索用户）
+## 5.8 飞书 OAuth 授权（按姓名搜索用户）
 
 按姓名/拼音搜索用户需要 `user_access_token`，必须完成 OAuth 授权流程：
 
@@ -252,7 +558,7 @@ cp .env.example .env
 
 ```
 # 本地开发
-http://localhost:8090/app/api/v1/feishu/oauth/callback
+http://localhost:8080/app/api/v1/feishu/oauth/callback
 
 # 生产环境（替换为实际域名）
 https://your-domain.com/app/api/v1/feishu/oauth/callback
@@ -270,18 +576,20 @@ https://your-domain.com/app/api/v1/feishu/oauth/callback
 
 > **说明**：未完成 OAuth 授权时，用户搜索仍可通过手机号/邮箱精确匹配，但无法按姓名模糊搜索。
 
-### JWT 配置
+## 5.9 JWT 配置
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `JWT_SECRET` | `your-secret-key` | JWT 签名密钥，**生产环境必须修改为强随机字符串** |
 | `JWT_EXPIRATION` | `24` | Token 有效期（小时） |
 
-## 📨 飞书消息发送格式说明
+> **安全提示**：`.env` 文件已加入 `.gitignore`，请勿将真实密钥提交到版本控制系统。
+
+# 六、飞书消息发送格式说明
 
 前端页面 **飞书管理 → 发送消息** 中，不同消息类型对应不同的 `content` 格式，填写错误会导致飞书 API 报错。
 
-### text（文本消息）
+## 6.1 text（文本消息）
 
 直接填写纯文本内容即可，后端会自动包装成飞书要求的格式：
 
@@ -289,9 +597,7 @@ https://your-domain.com/app/api/v1/feishu/oauth/callback
 你好，这是一条测试消息
 ```
 
----
-
-### post（富文本消息）
+## 6.2 post（富文本消息）
 
 必须填写符合飞书富文本规范的 JSON，结构为 `{"zh_cn": {...}}`：
 
@@ -321,9 +627,7 @@ https://your-domain.com/app/api/v1/feishu/oauth/callback
 | `at` | @用户 | `user_id`（填 `all` 表示 @所有人） |
 | `img` | 图片 | `image_key`（需先上传图片获取 key） |
 
----
-
-### interactive（卡片消息）
+## 6.3 interactive（卡片消息）
 
 必须填写符合飞书卡片 2.0 规范的 JSON：
 
@@ -359,18 +663,173 @@ https://your-domain.com/app/api/v1/feishu/oauth/callback
 
 > **注意**：`interactive` 类型的 content 必须是完整的卡片 JSON 对象，不能填写普通字符串。
 
-> **安全提示**：`.env` 文件已加入 `.gitignore`，请勿将真实密钥提交到版本控制系统。
+# 七、API 文档
 
-## 🤝 贡献指南
+后端集成 Swagger，服务启动后可通过以下地址在线查阅完整接口文档：
 
-欢迎贡献代码！请随时提交 Pull Request。
+| 环境 | 地址 |
+| ---- | ---- |
+| 本地开发 | `http://localhost:8080/swagger/index.html` |
+| 生产环境 | `http://your-domain.com/swagger/index.html` |
 
-1. Fork 本项目
-2. 创建特性分支：`git checkout -b feature/your-feature`
-3. 提交更改：`git commit -m 'feat: 添加某功能'`
-4. 推送分支：`git push origin feature/your-feature`
-5. 开启 Pull Request
+以下为接口速查表，按模块分组列出所有路由。
 
-## 📄 许可证
+**说明：**
+- 所有路由的 BasePath 为 `/app/api/v1`
+- 需要认证的接口需要在 Header 中携带 `Authorization: Bearer {token}`
+- 管理员权限：需要 admin 或 super_admin 角色
+- 超级管理员权限：需要 super_admin 角色
 
-本项目采用 [MIT 许可证](LICENSE)。
+## 7.1 认证与用户管理
+
+### 7.1.1 认证接口
+
+- `POST /auth/login` - 用户登录
+- `POST /auth/register` - 用户注册
+
+### 7.1.2 用户管理
+
+- `GET /users` - 获取用户列表（需要认证）
+- `GET /users/profile` - 获取当前用户资料（需要认证）
+- `GET /users/:id` - 获取用户详情（需要认证）
+- `POST /users` - 创建用户（需要管理员）
+- `PUT /users/:id` - 更新用户信息（需要管理员）
+- `PUT /users/:id/role` - 更新用户角色（需要管理员）
+- `PUT /users/:id/status` - 更新用户状态（需要管理员）
+- `DELETE /users/:id` - 删除用户（需要管理员）
+- `POST /users/change-password` - 修改密码（需要认证）
+- `POST /users/:id/reset-password` - 重置密码（需要管理员）
+
+### 7.1.3 RBAC 权限管理
+
+- `GET /rbac/roles` - 获取角色列表（需要认证）
+- `GET /rbac/roles/:id` - 获取角色详情（需要认证）
+- `POST /rbac/roles` - 创建角色（需要超级管理员）
+- `PUT /rbac/roles/:id` - 更新角色（需要超级管理员）
+- `DELETE /rbac/roles/:id` - 删除角色（需要超级管理员）
+- `GET /rbac/permissions` - 获取权限列表（需要认证）
+- `GET /rbac/my-permissions` - 获取当前用户权限（需要认证）
+
+## 7.2 应用管理
+
+### 7.2.1 应用管理
+
+- `GET /app` - 获取应用列表（需要认证）
+- `GET /app/:id` - 获取应用详情（需要认证）
+- `POST /app` - 创建应用（需要管理员）
+- `PUT /app/:id` - 更新应用（需要管理员）
+- `DELETE /app/:id` - 删除应用（需要管理员）
+- `GET /app/:id/envs` - 获取应用环境列表（需要认证）
+- `GET /app/:id/deploys` - 获取应用部署记录（需要认证）
+- `GET /app/stats` - 获取应用统计（需要认证）
+
+### 7.2.2 金丝雀发布
+
+- `GET /applications/:id/release/canary` - 获取金丝雀发布列表（需要认证）
+- `POST /applications/:id/release/canary` - 创建金丝雀发布（需要认证）
+- `POST /applications/:id/release/canary/:releaseId/start` - 开始金丝雀发布（需要认证）
+- `POST /applications/:id/release/canary/:releaseId/pause` - 暂停金丝雀发布（需要认证）
+- `POST /applications/:id/release/canary/:releaseId/rollback` - 回滚金丝雀发布（需要认证）
+
+### 7.2.3 蓝绿部署
+
+- `GET /deploy/bluegreen/list` - 获取所有蓝绿部署列表（需要认证）
+- `POST /deploy/bluegreen/start` - 开始蓝绿部署（需要认证）
+- `POST /deploy/bluegreen/:id/switch` - 切换蓝绿环境（需要认证）
+- `POST /deploy/bluegreen/:id/rollback` - 回滚蓝绿部署（需要认证）
+
+## 7.3 发布管理
+
+- `POST /deploy/records` - 创建部署记录（需要认证）
+- `GET /deploy/records` - 获取部署记录列表（需要认证）
+- `POST /deploy/records/:id/approve` - 审批通过（需要认证）
+- `POST /deploy/records/:id/reject` - 审批拒绝（需要认证）
+- `POST /deploy/records/:id/execute` - 执行部署（需要认证）
+- `POST /deploy/rollback` - 创建回滚（需要认证）
+- `GET /deploy/stats` - 获取部署统计（需要认证）
+
+## 7.4 审批管理
+
+- `GET /approval/chains` - 获取审批链列表（需要认证）
+- `POST /approval/chains` - 创建审批链（需要认证）
+- `GET /approval/pending` - 获取待审批列表（需要认证）
+- `POST /approval/:id/approve` - 审批通过（需要认证）
+- `POST /approval/:id/reject` - 审批拒绝（需要认证）
+
+## 7.5 Pipeline 流水线
+
+- `GET /pipelines` - 获取流水线列表（需要认证）
+- `POST /pipelines` - 创建流水线（需要认证）
+- `POST /pipelines/:id/run` - 运行流水线（需要认证）
+- `GET /pipelines/runs` - 获取执行历史（需要认证）
+- `GET /pipelines/templates` - 获取模板列表（需要认证）
+- `GET /pipelines/credentials` - 获取凭证列表（需要认证）
+- `POST /webhook/github/:repoId` - GitHub Webhook
+- `POST /webhook/gitlab/:repoId` - GitLab Webhook
+
+## 7.6 Kubernetes 集群管理
+
+- `GET /k8s-clusters` - 获取集群列表（需要认证）
+- `POST /k8s-clusters` - 创建集群（需要超级管理员）
+- `PUT /k8s-clusters/:id` - 更新集群（需要超级管理员）
+- `DELETE /k8s-clusters/:id` - 删除集群（需要超级管理员）
+- `POST /k8s-clusters/:id/test-connection` - 测试连接（需要超级管理员）
+- `GET /k8s-clusters/:id/namespaces` - 获取命名空间列表（需要认证）
+- `GET /k8s-clusters/:id/pods` - 获取 Pod 列表（需要认证）
+- `GET /k8s/exec/shell` - WebSocket 终端（需要认证）
+
+## 7.7 Jenkins 管理
+
+- `GET /jenkins-instances` - 获取 Jenkins 实例列表（需要认证）
+- `POST /jenkins-instances` - 创建实例（需要管理员）
+- `PUT /jenkins-instances/:id` - 更新实例（需要管理员）
+- `DELETE /jenkins-instances/:id` - 删除实例（需要管理员）
+- `POST /jenkins-instances/:id/test-connection` - 测试连接（需要管理员）
+- `GET /jenkins-instances/:id/jobs` - 获取任务列表（需要认证）
+
+## 7.8 告警管理
+
+- `GET /alert/configs` - 获取告警配置列表（需要认证）
+- `POST /alert/configs` - 创建告警配置（需要管理员）
+- `GET /alert/histories` - 获取告警历史（需要认证）
+- `GET /alert/silences` - 获取静默规则列表（需要认证）
+- `GET /alert/stats` - 获取告警统计（需要认证）
+
+## 7.9 健康检查
+
+- `GET /healthcheck/configs` - 获取配置列表（需要认证）
+- `POST /healthcheck/configs` - 创建配置（需要管理员）
+- `GET /healthcheck/ssl-domains` - 获取 SSL 域名列表（需要认证）
+- `GET /healthcheck/ssl-domains/expiring` - 获取即将过期证书（需要认证）
+- `GET /healthcheck/stats` - 获取统计数据（需要认证）
+
+## 7.10 通知管理
+
+### 7.10.1 飞书
+
+- `POST /feishu/send-message` - 发送消息
+- `POST /feishu/api/send-card` - 发送卡片消息
+- `POST /feishu/user/search` - 搜索用户
+- `GET /feishu/oauth/authorize` - OAuth 授权
+- `GET /feishu/app` - 获取应用列表
+- `POST /feishu/app` - 创建应用
+
+### 7.10.2 钉钉与企业微信
+
+- `POST /dingtalk/send-message` - 发送钉钉消息
+- `POST /wechatwork/send-message` - 发送企业微信消息
+
+## 7.11 安全管理
+
+- `GET /security/overview` - 获取安全概览（需要认证）
+- `POST /security/scan` - 扫描镜像（需要认证）
+- `GET /security/scans` - 获取扫描历史（需要认证）
+- `GET /security/registries` - 获取仓库列表（需要认证）
+- `GET /security/audit-logs` - 获取审计日志（需要认证）
+
+## 7.12 系统管理
+
+- `GET /audit/logs` - 获取审计日志列表（需要认证）
+- `GET /dashboard/stats` - 获取仪表盘统计数据
+- `GET /health` - 健康检查
+- `GET /metrics` - Prometheus 指标
