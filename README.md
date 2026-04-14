@@ -7,7 +7,7 @@
 ![Redis](https://img.shields.io/badge/Redis-6.0%2B-DC382D.svg)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.20%2B-326CE5.svg)
 
-一个企业级的一站式 DevOps 管理平台，旨在简化 Kubernetes 运维、CI/CD 流水线、流量治理和可观测性。基于现代技术栈构建，支持高性能和可扩展的软件交付。
+DevOps 是一套开箱即用的企业级一站式 DevOps 平台，深度融合云原生生态，提供 Kubernetes 可视化运维、灵活可编排的 CI/CD 流水线、服务流量治理以及监控告警、日志追踪等全链路可观测能力。平台采用现代化技术架构，兼顾性能与扩展性，助力企业快速落地云原生研发运维体系，提升交付效率与运维稳定性。
 
 ## 登录界面
 
