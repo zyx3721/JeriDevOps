@@ -689,6 +689,7 @@ CREATE TABLE IF NOT EXISTS `health_check_configs` (
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `deleted_at` datetime(3) DEFAULT NULL,
   `name` varchar(100) NOT NULL COMMENT '检查名称',
+  `type` varchar(50) DEFAULT 'http' COMMENT '检查类型: http/tcp/ssl_cert/dns',
   `url` varchar(500) NOT NULL COMMENT '检查URL',
   `method` varchar(10) DEFAULT 'GET' COMMENT '请求方法',
   `headers` text COMMENT '请求头JSON',
@@ -700,12 +701,17 @@ CREATE TABLE IF NOT EXISTS `health_check_configs` (
   `enabled` tinyint(1) DEFAULT 1,
   `last_status` varchar(20) DEFAULT 'unknown' COMMENT '最后检查状态',
   `last_checked_at` datetime(3) DEFAULT NULL COMMENT '最后检查时间',
+  `cert_days_remaining` int DEFAULT NULL COMMENT 'SSL证书剩余天数',
+  `last_alert_level` varchar(20) DEFAULT NULL COMMENT '最后告警级别: info/warning/error/critical',
   `alert_config_id` bigint unsigned DEFAULT NULL COMMENT '告警配置ID',
   `description` varchar(500) DEFAULT '',
   `created_by` bigint unsigned DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_hcc_enabled` (`enabled`),
+  KEY `idx_hcc_type` (`type`),
   KEY `idx_hcc_last_status` (`last_status`),
+  KEY `idx_hcc_cert_days` (`cert_days_remaining`),
+  KEY `idx_hcc_alert_level` (`last_alert_level`),
   KEY `idx_hcc_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='健康检查配置';
 
@@ -1926,11 +1932,13 @@ CREATE TABLE IF NOT EXISTS `log_saved_queries` (
   `tags` varchar(200) DEFAULT '' COMMENT '标签',
   `user_id` bigint unsigned DEFAULT NULL COMMENT '创建用户ID',
   `is_public` tinyint(1) DEFAULT 0 COMMENT '是否公开',
+  `is_shared` tinyint(1) DEFAULT 0 COMMENT '是否共享给团队',
   `use_count` int DEFAULT 0 COMMENT '使用次数',
   PRIMARY KEY (`id`),
   KEY `idx_lsq_deleted_at` (`deleted_at`),
   KEY `idx_lsq_user_id` (`user_id`),
-  KEY `idx_lsq_datasource_id` (`datasource_id`)
+  KEY `idx_lsq_datasource_id` (`datasource_id`),
+  KEY `idx_lsq_is_shared` (`is_shared`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='日志保存查询';
 
 -- 88. K8s集群飞书应用关联表
@@ -1999,25 +2007,32 @@ CREATE TABLE IF NOT EXISTS `resource_costs` (
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   `deleted_at` datetime(3) DEFAULT NULL,
+  `cluster_id` bigint unsigned DEFAULT NULL COMMENT '集群ID',
+  `namespace` varchar(100) DEFAULT '' COMMENT '命名空间',
   `resource_type` varchar(50) NOT NULL COMMENT '资源类型: pod/node/service',
   `resource_name` varchar(200) NOT NULL COMMENT '资源名称',
-  `namespace` varchar(100) DEFAULT '' COMMENT '命名空间',
-  `cluster_id` bigint unsigned DEFAULT NULL COMMENT '集群ID',
-  `cost` decimal(12,4) DEFAULT 0.0000 COMMENT '成本金额',
-  `total_cost` decimal(14,4) DEFAULT 0.0000 COMMENT '总成本',
-  `currency` varchar(10) DEFAULT 'CNY' COMMENT '货币单位',
-  `period_start` datetime(3) DEFAULT NULL COMMENT '统计周期开始',
-  `period_end` datetime(3) DEFAULT NULL COMMENT '统计周期结束',
-  `cpu_cost` decimal(12,4) DEFAULT 0.0000 COMMENT 'CPU成本',
+  `app_name` varchar(100) DEFAULT '' COMMENT '应用名称',
+  `team_name` varchar(100) DEFAULT '' COMMENT '团队名称',
   `cpu_request` decimal(10,2) DEFAULT 0.00 COMMENT 'CPU 请求量(核)',
-  `memory_cost` decimal(12,4) DEFAULT 0.0000 COMMENT '内存成本',
+  `cpu_limit` decimal(10,2) DEFAULT 0.00 COMMENT 'CPU 限制量(核)',
+  `cpu_usage` decimal(10,2) DEFAULT 0.00 COMMENT 'CPU 实际使用量(核)',
+  `cpu_cost` decimal(12,4) DEFAULT 0.0000 COMMENT 'CPU成本',
   `memory_request` decimal(10,2) DEFAULT 0.00 COMMENT '内存请求量(GB)',
+  `memory_limit` decimal(10,2) DEFAULT 0.00 COMMENT '内存限制量(GB)',
+  `memory_usage` decimal(10,2) DEFAULT 0.00 COMMENT '内存实际使用量(GB)',
+  `memory_cost` decimal(12,4) DEFAULT 0.0000 COMMENT '内存成本',
+  `storage_size` decimal(10,2) DEFAULT 0.00 COMMENT '存储大小(GB)',
   `storage_cost` decimal(12,4) DEFAULT 0.0000 COMMENT '存储成本',
+  `total_cost` decimal(14,4) DEFAULT 0.0000 COMMENT '总成本',
+  `recorded_at` datetime(3) DEFAULT NULL COMMENT '成本记录时间',
   PRIMARY KEY (`id`),
   KEY `idx_rc_deleted_at` (`deleted_at`),
   KEY `idx_rc_resource_type` (`resource_type`),
   KEY `idx_rc_cluster_id` (`cluster_id`),
-  KEY `idx_rc_period_start` (`period_start`)
+  KEY `idx_rc_namespace` (`namespace`),
+  KEY `idx_rc_app_name` (`app_name`),
+  KEY `idx_rc_team_name` (`team_name`),
+  KEY `idx_rc_recorded_at` (`recorded_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资源成本记录';
 
 -- 95. 成本汇总表
