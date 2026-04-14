@@ -570,10 +570,28 @@ CREATE INDEX IF NOT EXISTS `idx_cc_checked_at` ON `config_checks`(`checked_at`);
 -- 10.1 health_check_configs 表补充字段
 ALTER TABLE `health_check_configs`
   ADD COLUMN IF NOT EXISTS `type` varchar(50) DEFAULT 'http' COMMENT '检查类型: http/tcp/ssl_cert/dns' AFTER `name`,
-  ADD COLUMN IF NOT EXISTS `cert_days_remaining` int DEFAULT NULL COMMENT 'SSL证书剩余天数' AFTER `last_checked_at`,
-  ADD COLUMN IF NOT EXISTS `last_alert_level` varchar(20) DEFAULT NULL COMMENT '最后告警级别: info/warning/error/critical' AFTER `cert_days_remaining`;
+  ADD COLUMN IF NOT EXISTS `target_id` bigint unsigned DEFAULT 0 COMMENT '目标资源ID' AFTER `type`,
+  ADD COLUMN IF NOT EXISTS `target_name` varchar(200) DEFAULT '' COMMENT '目标名称' AFTER `target_id`,
+  ADD COLUMN IF NOT EXISTS `retry_count` int DEFAULT 3 COMMENT '重试次数' AFTER `timeout`,
+  ADD COLUMN IF NOT EXISTS `alert_enabled` tinyint(1) DEFAULT 1 COMMENT '是否启用告警' AFTER `enabled`,
+  ADD COLUMN IF NOT EXISTS `alert_platform` varchar(50) DEFAULT '' COMMENT '告警平台' AFTER `alert_enabled`,
+  ADD COLUMN IF NOT EXISTS `alert_bot_id` bigint unsigned DEFAULT NULL COMMENT '告警机器人ID' AFTER `alert_platform`,
+  ADD COLUMN IF NOT EXISTS `last_check_at` datetime(3) DEFAULT NULL COMMENT '最后检查时间' AFTER `alert_bot_id`,
+  ADD COLUMN IF NOT EXISTS `last_error` text COMMENT '最后错误信息' AFTER `last_status`,
+  ADD COLUMN IF NOT EXISTS `cert_expiry_date` datetime(3) DEFAULT NULL COMMENT '证书过期时间' AFTER `last_error`,
+  ADD COLUMN IF NOT EXISTS `cert_days_remaining` int DEFAULT NULL COMMENT 'SSL证书剩余天数' AFTER `cert_expiry_date`,
+  ADD COLUMN IF NOT EXISTS `cert_issuer` varchar(500) DEFAULT '' COMMENT '证书颁发者' AFTER `cert_days_remaining`,
+  ADD COLUMN IF NOT EXISTS `cert_subject` varchar(500) DEFAULT '' COMMENT '证书主题' AFTER `cert_issuer`,
+  ADD COLUMN IF NOT EXISTS `cert_serial_number` varchar(100) DEFAULT '' COMMENT '证书序列号' AFTER `cert_subject`,
+  ADD COLUMN IF NOT EXISTS `critical_days` int DEFAULT 7 COMMENT '严重告警阈值（天）' AFTER `cert_serial_number`,
+  ADD COLUMN IF NOT EXISTS `warning_days` int DEFAULT 30 COMMENT '警告告警阈值（天）' AFTER `critical_days`,
+  ADD COLUMN IF NOT EXISTS `notice_days` int DEFAULT 60 COMMENT '提醒告警阈值（天）' AFTER `warning_days`,
+  ADD COLUMN IF NOT EXISTS `last_alert_level` varchar(20) DEFAULT NULL COMMENT '最后告警级别: info/warning/error/critical' AFTER `notice_days`,
+  ADD COLUMN IF NOT EXISTS `last_alert_at` datetime(3) DEFAULT NULL COMMENT '最后告警时间' AFTER `last_alert_level`;
 
 CREATE INDEX IF NOT EXISTS `idx_hcc_type` ON `health_check_configs`(`type`);
+CREATE INDEX IF NOT EXISTS `idx_hcc_target_id` ON `health_check_configs`(`target_id`);
+CREATE INDEX IF NOT EXISTS `idx_hcc_alert_bot_id` ON `health_check_configs`(`alert_bot_id`);
 CREATE INDEX IF NOT EXISTS `idx_hcc_cert_days` ON `health_check_configs`(`cert_days_remaining`);
 CREATE INDEX IF NOT EXISTS `idx_hcc_alert_level` ON `health_check_configs`(`last_alert_level`);
 
