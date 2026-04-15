@@ -31,7 +31,6 @@ deploy/MySqlData/
 deploy/DevOpsData/
 
 # 文档和截图（非运行时必需）
-docs/
 screenshots/
 README.md
 
