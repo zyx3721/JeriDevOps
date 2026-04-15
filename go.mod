@@ -1,6 +1,6 @@
 module devops
 
-go 1.25.6
+go 1.25
 
 require (
 	github.com/bndr/gojenkins v1.1.0
