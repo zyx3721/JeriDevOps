@@ -166,7 +166,6 @@ docker run -d --name devops-mysql \
 docker run -d --name devops-redis \
   -p 6379:6379 \
   -v /data/redisData:/data \
-  -e REDIS_PASSWORD=123456 \
   -e TZ=Asia/Shanghai \
   redis:7-alpine \
   redis-server --requirepass 123456 --appendonly yes
@@ -473,7 +472,7 @@ cp .env.example .env
 | `MYSQL_HOST` | `localhost` | MySQL 主机地址 |
 | `MYSQL_PORT` | `3306` | MySQL 端口 |
 | `MYSQL_USER` | `root` | 数据库用户名 |
-| `MYSQL_PASSWORD` | — | 数据库密码（必填） |
+| `MYSQL_PASSWORD` | `123456` | 数据库密码 |
 | `MYSQL_DATABASE` | `devops` | 数据库名称 |
 | `MYSQL_MAX_IDLE_CONNS` | `10` | 连接池最大空闲连接数 |
 | `MYSQL_MAX_OPEN_CONNS` | `100` | 连接池最大打开连接数 |
