@@ -1,0 +1,39 @@
+# Node 依赖（平台相关，在 Docker 内重新安装）
+node_modules/
+web/node_modules/
+
+# 构建产物（在 Docker 内重新构建）
+web/dist/
+
+# Go 构建产物
+cmd/devops
+
+# 环境变量文件（含敏感信息，禁止打包进镜像）
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Git 历史
+.git/
+.gitignore
+
+# 日志
+**/*.log
+test.log
+
+# IDE
+.vscode/
+.idea/
+
+# 部署相关数据目录（运行时挂载）
+deploy/MySqlData/
+deploy/DevOpsData/
+
+# 文档和截图（非运行时必需）
+docs/
+screenshots/
+README.md
+
+# Claude 配置
+.claude/
