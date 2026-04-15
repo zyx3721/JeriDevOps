@@ -12,11 +12,12 @@
 
 services:
   # ----------------------------------------------------------------
-  # MySQL 数据库容器
+  # MySQL 数据库容器（使用已有容器时注释此块）
   # ----------------------------------------------------------------
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.34
     container_name: devops-mysql
+    privileged: true
     restart: unless-stopped
     networks:
       - devops_network
@@ -28,10 +29,12 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       TZ: Asia/Shanghai
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
 
   # ----------------------------------------------------------------
-  # Redis 缓存容器
+  # Redis 缓存容器（使用已有容器时注释此块）
   # ----------------------------------------------------------------
   redis:
     image: redis:7-alpine
@@ -47,23 +50,23 @@ services:
       TZ: Asia/Shanghai
 
   # ----------------------------------------------------------------
-  # DevOps 应用容器（前端 + 后端）
+  # DevOps 应用容器
   # ----------------------------------------------------------------
   devops:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    image: registry.cn-shenzhen.aliyuncs.com/zyx3721/devops:latest
+    image: registry.cn-shenzhen.aliyuncs.com/zyx3721/jeridevops:latest
     container_name: devops
     restart: unless-stopped
     networks:
       - devops_network
     ports:
-      - 80:80
+      - 80:80  # 宿主机:容器（容器内 Nginx 监听 80，反向代理到 Go 8080）
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ./DevOpsData:/app/data
+    # ----------------------------------------------------------------
+    # 依赖新建容器（使用已有容器时注释此块）
+    # ----------------------------------------------------------------
     depends_on:
       - mysql
       - redis
