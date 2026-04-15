@@ -367,6 +367,11 @@ vim .env
 # 容器间通信使用 service name（非 container_name）
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
+
+# MySQL root 密码（用于容器初始化，必填）
+MYSQL_ROOT_PASSWORD=your_root_password
+
+# 应用连接数据库的用户（可以是 root 或普通用户）
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=devops
@@ -403,7 +408,10 @@ K8S_REPOSITORY=
 
 - **容器网络**：MySQL 和 Redis 使用 `docker-compose.yaml` 中定义的 service name（`mysql`、`redis`），而非 container_name
 - **容器架构**：容器内 Nginx 监听 80 端口，反向代理到 Go 后端 8080 端口，无需配置 `PORT` 变量
-- **必填项**：`MYSQL_PASSWORD`、`JWT_SECRET`、`JENKINS_*` 必须修改为真实值
+- **MySQL 用户**：
+  - `MYSQL_ROOT_PASSWORD`：用于 MySQL 容器初始化（必填）
+  - `MYSQL_USER/MYSQL_PASSWORD`：后端应用连接数据库使用（默认用 root，也可创建普通用户）
+- **必填项**：`MYSQL_ROOT_PASSWORD`、`MYSQL_PASSWORD`、`JWT_SECRET`、`JENKINS_*` 必须修改为真实值
 - **可选项**：飞书和 K8s 配置按需填写
 
 ## 4.3 构建镜像（可选）
